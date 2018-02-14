@@ -54,7 +54,6 @@ public class QueryMetacardImpl extends MetacardImpl {
   public void setEnterprise(Boolean b) {
     setAttribute(QueryMetacardTypeImpl.QUERY_ENTERPRISE, b);
   }
-
   /**
    * Get a list of the query sources.
    *

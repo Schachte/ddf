@@ -117,6 +117,7 @@ import org.codice.ddf.catalog.ui.metacard.history.HistoryResponse;
 import org.codice.ddf.catalog.ui.metacard.notes.NoteConstants;
 import org.codice.ddf.catalog.ui.metacard.notes.NoteMetacard;
 import org.codice.ddf.catalog.ui.metacard.notes.NoteUtil;
+import org.codice.ddf.catalog.ui.metacard.template.QueryTemplateMetacardTypeImpl;
 import org.codice.ddf.catalog.ui.metacard.transform.CsvTransform;
 import org.codice.ddf.catalog.ui.metacard.validation.Validator;
 import org.codice.ddf.catalog.ui.metacard.workspace.WorkspaceAttributes;
@@ -427,6 +428,29 @@ public class MetacardApplication implements SparkApplication {
               .build();
         },
         util::getJson);
+
+    get(
+            "/querytemplates",
+            (req, res) -> {
+                String email = getSubjectEmail();
+                Map<String, Result> templateMetacards =
+                        util.getMetacardsByFilter(QueryTemplateMetacardTypeImpl.QUERY_TEMPLATE_TAG);
+                return "";
+            }
+    );
+
+      post(
+              "/querytemplates",
+              APPLICATION_JSON,
+              (req, res) -> {
+                  Map<String, Object> incoming =
+                          JsonFactory.create().parser().parseMap(util.safeGetBody(req));
+                  Metacard saved = saveMetacard(transformer.transform(incoming));
+                  Map<String, Object> response = transformer.transform(saved);
+
+                  res.status(201);
+                  return util.getJson(response);
+              });
 
     get(
         "/workspaces",

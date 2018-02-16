@@ -32,13 +32,9 @@ import ddf.catalog.resource.Resource;
 import ddf.catalog.resource.ResourceNotFoundException;
 import ddf.catalog.resource.ResourceNotSupportedException;
 import ddf.catalog.resource.impl.ResourceImpl;
-import ddf.catalog.service.ConfiguredService;
-import ddf.catalog.source.ConnectedSource;
-import ddf.catalog.source.FederatedSource;
 import ddf.catalog.source.SourceMonitor;
 import ddf.catalog.source.UnsupportedQueryException;
 import ddf.catalog.transform.CatalogTransformerException;
-import ddf.catalog.util.impl.MaskableImpl;
 import ddf.security.encryption.EncryptionService;
 import ddf.security.service.SecurityServiceException;
 import java.io.IOException;
@@ -86,6 +82,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.cxf.jaxrs.provider.JAXBElementProvider;
 import org.apache.ws.commons.schema.XmlSchema;
 import org.codice.ddf.configuration.DictionaryMap;
+import org.codice.ddf.cxf.ClientKeyInfo;
 import org.codice.ddf.cxf.SecureCxfClientFactory;
 import org.codice.ddf.libs.geo.util.GeospatialUtil;
 import org.codice.ddf.platform.util.StandardThreadFactoryBuilder;
@@ -94,6 +91,7 @@ import org.codice.ddf.spatial.ogc.catalog.common.AvailabilityCommand;
 import org.codice.ddf.spatial.ogc.catalog.common.AvailabilityTask;
 import org.codice.ddf.spatial.ogc.catalog.common.ContentTypeFilterDelegate;
 import org.codice.ddf.spatial.ogc.wfs.catalog.MetacardTypeEnhancer;
+import org.codice.ddf.spatial.ogc.wfs.catalog.common.AbstractWfsSource;
 import org.codice.ddf.spatial.ogc.wfs.catalog.common.FeatureMetacardType;
 import org.codice.ddf.spatial.ogc.wfs.catalog.common.WfsException;
 import org.codice.ddf.spatial.ogc.wfs.catalog.common.WfsFeatureCollection;
@@ -117,8 +115,7 @@ import org.slf4j.LoggerFactory;
 
 /** Provides a Federated and Connected source implementation for OGC WFS servers. */
 @SuppressWarnings({"unused", "WeakerAccess"})
-public class WfsSource extends MaskableImpl
-    implements FederatedSource, ConnectedSource, ConfiguredService {
+public class WfsSource extends AbstractWfsSource {
 
   static final int WFS_MAX_FEATURES_RETURNED = 1000;
 
@@ -164,6 +161,10 @@ public class WfsSource extends MaskableImpl
   private static final String DISABLE_CN_CHECK_KEY = "disableCnCheck";
 
   private static final String COORDINATE_ORDER_KEY = "coordinateOrder";
+
+  private static final String ALLOW_REDIRECTS_KEY = "allowRedirects";
+
+  private static final String SRS_NAME_KEY = "srsName";
 
   private static final Properties DESCRIBABLE_PROPERTIES = new Properties();
 
@@ -224,6 +225,10 @@ public class WfsSource extends MaskableImpl
   private FeatureCollectionMessageBodyReaderWfs11 featureCollectionReader;
 
   private List<MetacardTypeEnhancer> metacardTypeEnhancers;
+
+  private String srsName;
+
+  private boolean allowRedirects;
 
   static {
     try (InputStream properties =
@@ -298,6 +303,7 @@ public class WfsSource extends MaskableImpl
     String usernameValue = (String) configuration.get(USERNAME_KEY);
     Boolean disableCnCheckProp = (Boolean) configuration.get(DISABLE_CN_CHECK_KEY);
     String id = (String) configuration.get(ID_KEY);
+    Boolean allowRedirects = (Boolean) configuration.get(ALLOW_REDIRECTS_KEY);
     if (hasSourceIdChanged(id)) {
       setId(id);
       configureWfsFeatures();
@@ -305,17 +311,23 @@ public class WfsSource extends MaskableImpl
 
     setConnectionTimeout((Integer) configuration.get(CONNECTION_TIMEOUT_KEY));
     setReceiveTimeout((Integer) configuration.get(RECEIVE_TIMEOUT_KEY));
+    setSrsName((String) configuration.get(SRS_NAME_KEY));
 
     this.nonQueryableProperties = (String[]) configuration.get(NON_QUERYABLE_PROPS_KEY);
 
     Integer newPollInterval = (Integer) configuration.get(POLL_INTERVAL_KEY);
 
-    if (hasWfsUrlChanged(url) || hasDisableCnCheck(disableCnCheckProp)) {
+    if (hasWfsUrlChanged(url)
+        || hasDisableCnCheckChanged(disableCnCheckProp)
+        || hasUsernameChanged(usernameValue)
+        || hasPasswordChanged(passwordValue)
+        || hasAllowRedirectsChanged(allowRedirects)) {
       this.wfsUrl = url;
       this.password = encryptionService.decryptValue(passwordValue);
       this.username = usernameValue;
       this.disableCnCheck = disableCnCheckProp;
       this.coordinateOrder = coordOrder;
+      this.allowRedirects = allowRedirects;
       createClientFactory();
       configureWfsFeatures();
     } else {
@@ -342,6 +354,10 @@ public class WfsSource extends MaskableImpl
     }
   }
 
+  public void setAllowRedirects(Boolean allowRedirects) {
+    this.allowRedirects = allowRedirects;
+  }
+
   /** This method should only be called after all properties have been set. */
   @SuppressWarnings("unchecked")
   private void createClientFactory() {
@@ -353,11 +369,25 @@ public class WfsSource extends MaskableImpl
               initProviders(),
               new MarkableStreamInterceptor(),
               this.disableCnCheck,
-              false,
+              this.allowRedirects,
               null,
               null,
               username,
               password);
+    } else if (StringUtils.isNotBlank(getCertAlias())
+        && StringUtils.isNotBlank(getKeystorePath())) {
+      factory =
+          new SecureCxfClientFactory(
+              wfsUrl,
+              Wfs.class,
+              initProviders(),
+              new MarkableStreamInterceptor(),
+              this.disableCnCheck,
+              this.allowRedirects,
+              null,
+              null,
+              new ClientKeyInfo(getCertAlias(), getKeystorePath()),
+              getSslProtocol());
     } else {
       factory =
           new SecureCxfClientFactory(
@@ -366,7 +396,7 @@ public class WfsSource extends MaskableImpl
               initProviders(),
               new MarkableStreamInterceptor(),
               this.disableCnCheck,
-              false);
+              this.allowRedirects);
     }
   }
 
@@ -545,7 +575,7 @@ public class WfsSource extends MaskableImpl
 
           this.featureTypeFilters.put(
               featureMetacardType.getFeatureType(),
-              new WfsFilterDelegate(featureMetacardType, supportedGeo, registration.getSrs()));
+              new WfsFilterDelegate(featureMetacardType, supportedGeo));
         }
       } catch (WfsException | IllegalArgumentException wfse) {
         LOGGER.debug(WFS_ERROR_MESSAGE, wfse);
@@ -800,7 +830,9 @@ public class WfsSource extends MaskableImpl
           || isFeatureTypeInQuery(contentTypes, filterDelegateEntry.getKey().getLocalPart())) {
         QueryType wfsQuery = new QueryType();
         wfsQuery.setTypeName(Collections.singletonList(filterDelegateEntry.getKey()));
-        wfsQuery.setSrsName(GeospatialUtil.EPSG_X_4326_URN);
+        if (StringUtils.isNotBlank(srsName)) {
+          wfsQuery.setSrsName(srsName);
+        }
         FilterType filter = filterAdapter.adapt(query, filterDelegateEntry.getValue());
         if (filter != null) {
           if (areAnyFiltersSet(filter)) {
@@ -1012,6 +1044,14 @@ public class WfsSource extends MaskableImpl
     return this.receiveTimeout;
   }
 
+  public void setSrsName(String srsName) {
+    this.srsName = srsName;
+  }
+
+  public String getSrsName() {
+    return this.srsName;
+  }
+
   public void setFilterAdapter(FilterAdapter filterAdapter) {
     this.filterAdapter = filterAdapter;
   }
@@ -1183,11 +1223,23 @@ public class WfsSource extends MaskableImpl
     return !StringUtils.equals(this.wfsUrl, wfsUrl);
   }
 
+  private boolean hasUsernameChanged(String usernameValue) {
+    return !StringUtils.equals(this.username, usernameValue);
+  }
+
+  private boolean hasPasswordChanged(String passwordValue) {
+    return !StringUtils.equals(this.password, passwordValue);
+  }
+
+  private boolean hasAllowRedirectsChanged(boolean allowRedirects) {
+    return this.allowRedirects != allowRedirects;
+  }
+
   private boolean hasSourceIdChanged(String id) {
     return !StringUtils.equals(getId(), id);
   }
 
-  private boolean hasDisableCnCheck(Boolean disableCnCheck) {
+  private boolean hasDisableCnCheckChanged(Boolean disableCnCheck) {
     return this.disableCnCheck != disableCnCheck;
   }
 

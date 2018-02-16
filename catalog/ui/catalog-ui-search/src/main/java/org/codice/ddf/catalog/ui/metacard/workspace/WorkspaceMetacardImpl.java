@@ -94,12 +94,7 @@ public class WorkspaceMetacardImpl extends MetacardImpl {
    */
   public static boolean isWorkspaceMetacard(Metacard metacard) {
     if (metacard != null) {
-      return metacard
-          .getTags()
-          .stream()
-          .filter(WorkspaceAttributes.WORKSPACE_TAG::equals)
-          .findFirst()
-          .isPresent();
+      return metacard.getTags().stream().anyMatch(WorkspaceAttributes.WORKSPACE_TAG::equals);
     }
 
     return false;
@@ -142,6 +137,15 @@ public class WorkspaceMetacardImpl extends MetacardImpl {
 
   public WorkspaceMetacardImpl setQueries(List<String> queries) {
     setAttribute(WorkspaceAttributes.WORKSPACE_QUERIES, new ArrayList<>(queries));
+    return this;
+  }
+
+  public List<String> getContent() {
+    return getValues(WorkspaceAttributes.WORKSPACE_LISTS);
+  }
+
+  public WorkspaceMetacardImpl setContent(List<String> lists) {
+    setAttribute(WorkspaceAttributes.WORKSPACE_LISTS, new ArrayList<>(lists));
     return this;
   }
 

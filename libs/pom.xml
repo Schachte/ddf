@@ -41,5 +41,6 @@
         <module>spock-shaded</module>
         <module>alerts</module>
         <module>test-common</module>
+        <module>geotools-all</module>
     </modules>
 </project>

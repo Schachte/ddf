@@ -623,7 +623,6 @@ public class IdpEndpoint implements Idp, SessionHandler {
             getPresignPlugins(),
             spMetadata,
             SUPPORTED_BINDINGS),
-        submitForm,
         SamlProtocol.POST_BINDING);
   }
 
@@ -649,7 +648,6 @@ public class IdpEndpoint implements Idp, SessionHandler {
             getPresignPlugins(),
             spMetadata,
             SUPPORTED_BINDINGS),
-        redirectPage,
         SamlProtocol.REDIRECT_BINDING);
   }
 
@@ -665,10 +663,10 @@ public class IdpEndpoint implements Idp, SessionHandler {
       String signature,
       HttpServletRequest request,
       Binding binding,
-      String template,
       String originalBinding)
       throws WSSecurityException {
     String responseStr;
+    String template;
     AuthnRequest authnRequest = null;
     try {
       Map<String, Object> responseMap = new HashMap<>();
@@ -694,6 +692,35 @@ public class IdpEndpoint implements Idp, SessionHandler {
         LOGGER.debug("Received Passive & PKI AuthnRequest.");
         org.opensaml.saml.saml2.core.Response samlpResponse;
         try {
+
+          // Find binding supported by SP and change template
+          String assertionConsumerServiceBinding =
+              ResponseCreator.getAssertionConsumerServiceBinding(
+                  authnRequest, getServiceProvidersMap());
+
+          if (HTTP_POST_BINDING.equals(assertionConsumerServiceBinding)) {
+            binding =
+                new PostBinding(
+                    systemCrypto,
+                    getServiceProvidersMap(),
+                    getPresignPlugins(),
+                    spMetadata,
+                    SUPPORTED_BINDINGS);
+            template = submitForm;
+          } else if (HTTP_REDIRECT_BINDING.equals(assertionConsumerServiceBinding)) {
+            binding =
+                new RedirectBinding(
+                    systemCrypto,
+                    getServiceProvidersMap(),
+                    getPresignPlugins(),
+                    spMetadata,
+                    SUPPORTED_BINDINGS);
+            template = redirectPage;
+          } else {
+            throw new IdpException(
+                new UnsupportedOperationException("Must use HTTP POST or Redirect bindings."));
+          }
+
           samlpResponse =
               handleLogin(
                   authnRequest,
@@ -715,6 +742,10 @@ public class IdpEndpoint implements Idp, SessionHandler {
           LOGGER.debug(e.getMessage(), e);
           return getErrorResponse(
               relayState, authnRequest, StatusCode.REQUEST_UNSUPPORTED, binding);
+        } catch (IdpException e) {
+          LOGGER.debug(e.getMessage(), e);
+          return getErrorResponse(
+              relayState, authnRequest, StatusCode.UNSUPPORTED_BINDING, binding);
         }
         LOGGER.debug("Returning Passive & PKI SAML Response.");
         NewCookie cookie = null;
@@ -734,13 +765,14 @@ public class IdpEndpoint implements Idp, SessionHandler {
             .getSamlpResponse(relayState, authnRequest, samlpResponse, cookie, template);
       } else {
         LOGGER.debug("Building the JSON map to embed in the index.html page for login.");
-        Document doc = DOMUtils.createDocument();
-        doc.appendChild(doc.createElement("root"));
-        String authn = DOM2Writer.nodeToString(OpenSAMLUtil.toDom(authnRequest, doc, false));
-        String encodedAuthn = RestSecurity.deflateAndBase64Encode(authn);
         responseMap.put(PKI, hasCerts);
         responseMap.put(GUEST, guestAccess);
-        responseMap.put(SAML_REQ, encodedAuthn);
+        // Using the ORIGINAL request
+        // SAML Spec: "The relying party MUST therefore perform the verification step using the
+        // original URL-encoded values it received on the query string. It is not sufficient to
+        // re-encode the parameters after they have been processed by software because the resulting
+        // encoding may not match the signer's encoding".
+        responseMap.put(SAML_REQ, samlRequest);
         responseMap.put(RELAY_STATE, relayState);
         String assertionConsumerServiceURL =
             binding.creator().getAssertionConsumerServiceURL(authnRequest);
@@ -839,19 +871,6 @@ public class IdpEndpoint implements Idp, SessionHandler {
       if (!request.isSecure()) {
         throw new IllegalArgumentException(AUTHN_REQUEST_MUST_USE_TLS);
       }
-      // the authn request is always encoded as if it came in via redirect when coming from the web
-      // app
-      Binding redirectBinding =
-          new RedirectBinding(
-              systemCrypto,
-              getServiceProvidersMap(),
-              getPresignPlugins(),
-              spMetadata,
-              SUPPORTED_BINDINGS);
-      AuthnRequest authnRequest = redirectBinding.decoder().decodeRequest(samlRequest);
-      String assertionConsumerServiceBinding =
-          ResponseCreator.getAssertionConsumerServiceBinding(
-              authnRequest, getServiceProvidersMap());
       if (HTTP_POST_BINDING.equals(originalBinding)) {
         binding =
             new PostBinding(
@@ -862,12 +881,20 @@ public class IdpEndpoint implements Idp, SessionHandler {
                 SUPPORTED_BINDINGS);
         template = submitForm;
       } else if (HTTP_REDIRECT_BINDING.equals(originalBinding)) {
-        binding = redirectBinding;
+        binding =
+            new RedirectBinding(
+                systemCrypto,
+                getServiceProvidersMap(),
+                getPresignPlugins(),
+                spMetadata,
+                SUPPORTED_BINDINGS);
         template = redirectPage;
       } else {
         throw new IdpException(
             new UnsupportedOperationException("Must use HTTP POST or Redirect bindings."));
       }
+
+      AuthnRequest authnRequest = binding.decoder().decodeRequest(samlRequest);
       binding
           .validator()
           .validateAuthnRequest(
@@ -878,6 +905,9 @@ public class IdpEndpoint implements Idp, SessionHandler {
               signature,
               strictSignature);
 
+      String assertionConsumerServiceBinding =
+          ResponseCreator.getAssertionConsumerServiceBinding(
+              authnRequest, getServiceProvidersMap());
       if (HTTP_POST_BINDING.equals(assertionConsumerServiceBinding)
           && !(binding instanceof PostBinding)) {
         binding =
@@ -887,6 +917,7 @@ public class IdpEndpoint implements Idp, SessionHandler {
                 getPresignPlugins(),
                 spMetadata,
                 SUPPORTED_BINDINGS);
+        template = submitForm;
       } else if (HTTP_REDIRECT_BINDING.equals(assertionConsumerServiceBinding)
           && !(binding instanceof RedirectBinding)) {
         binding =
@@ -896,6 +927,7 @@ public class IdpEndpoint implements Idp, SessionHandler {
                 getPresignPlugins(),
                 spMetadata,
                 SUPPORTED_BINDINGS);
+        template = redirectPage;
       }
       org.opensaml.saml.saml2.core.Response encodedSaml =
           handleLogin(
@@ -1393,7 +1425,7 @@ public class IdpEndpoint implements Idp, SessionHandler {
         LogoutRequest logoutRequest =
             logoutMessage.buildLogoutRequest(
                 logoutState.getNameId(),
-                SystemBaseUrl.constructUrl(IDP_LOGOUT, true),
+                SystemBaseUrl.constructUrl(IDP_LOGIN, true),
                 logoutState.getSessionIndexes());
         logoutState.setCurrentRequestId(logoutRequest.getID());
         logoutObject = logoutRequest;
@@ -1406,7 +1438,7 @@ public class IdpEndpoint implements Idp, SessionHandler {
             logoutState.isPartialLogout() ? StatusCode.PARTIAL_LOGOUT : StatusCode.SUCCESS;
         logoutObject =
             logoutMessage.buildLogoutResponse(
-                SystemBaseUrl.constructUrl(IDP_LOGOUT, true),
+                SystemBaseUrl.constructUrl(IDP_LOGIN, true),
                 status,
                 logoutState.getOriginalRequestId());
 
@@ -1464,12 +1496,15 @@ public class IdpEndpoint implements Idp, SessionHandler {
             RestSecurity.deflateAndBase64Encode(
                 DOM2Writer.nodeToString(OpenSAMLUtil.toDom(samlResponse, doc, false))),
             "UTF-8");
-    String requestToSign =
-        String.format("%s=%s&RelayState=%s", samlType.getKey(), encodedResponse, relayState);
+    StringBuilder requestToSign =
+        new StringBuilder(samlType.getKey()).append("=").append(encodedResponse);
+    if (relayState != null) {
+      requestToSign.append("&RelayState=").append(relayState);
+    }
     UriBuilder uriBuilder = UriBuilder.fromUri(targetUrl);
     uriBuilder.queryParam(samlType.getKey(), encodedResponse);
     uriBuilder.queryParam(SSOConstants.RELAY_STATE, relayState == null ? "" : relayState);
-    new SimpleSign(systemCrypto).signUriString(requestToSign, uriBuilder);
+    new SimpleSign(systemCrypto).signUriString(requestToSign.toString(), uriBuilder);
     LOGGER.debug("Signing successful.");
     return Response.ok(HtmlResponseTemplate.getRedirectPage(uriBuilder.build().toString())).build();
   }

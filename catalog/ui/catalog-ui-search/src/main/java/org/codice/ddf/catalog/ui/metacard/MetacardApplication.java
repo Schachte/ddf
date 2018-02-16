@@ -14,6 +14,7 @@
 package org.codice.ddf.catalog.ui.metacard;
 
 import static ddf.catalog.util.impl.ResultIterable.resultIterable;
+import static java.lang.String.format;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
@@ -50,6 +51,7 @@ import ddf.catalog.data.MetacardType;
 import ddf.catalog.data.Result;
 import ddf.catalog.data.impl.AttributeImpl;
 import ddf.catalog.data.impl.ResultImpl;
+import ddf.catalog.data.impl.types.CoreAttributes;
 import ddf.catalog.data.impl.types.SecurityAttributes;
 import ddf.catalog.data.types.Core;
 import ddf.catalog.federation.FederationException;
@@ -117,6 +119,10 @@ import org.codice.ddf.catalog.ui.metacard.history.HistoryResponse;
 import org.codice.ddf.catalog.ui.metacard.notes.NoteConstants;
 import org.codice.ddf.catalog.ui.metacard.notes.NoteMetacard;
 import org.codice.ddf.catalog.ui.metacard.notes.NoteUtil;
+import org.codice.ddf.catalog.ui.metacard.template.QueryTemplateAttributes;
+import org.codice.ddf.catalog.ui.metacard.template.QueryTemplateMetacardImpl;
+import org.codice.ddf.catalog.ui.metacard.template.ResultTemplateAttributes;
+import org.codice.ddf.catalog.ui.metacard.template.ResultTemplateMetacardImpl;
 import org.codice.ddf.catalog.ui.metacard.transform.CsvTransform;
 import org.codice.ddf.catalog.ui.metacard.validation.Validator;
 import org.codice.ddf.catalog.ui.metacard.workspace.WorkspaceAttributes;
@@ -208,8 +214,99 @@ public class MetacardApplication implements SparkApplication {
     return SubjectUtils.getEmailAddress(SecurityUtils.getSubject());
   }
 
+  private Metacard mapToTemplate(Map<String, Object> map) {
+    String title = (String) map.get(CoreAttributes.TITLE);
+    String description = (String) map.get(CoreAttributes.DESCRIPTION);
+
+    Set<String> resultDescriptors =
+        (Set<String>) map.get(ResultTemplateAttributes.RESULT_DESCRIPTORS);
+
+    Set<String> queryDescriptors = (Set<String>) map.get(QueryTemplateAttributes.QUERY_DESCRIPTORS);
+    String templateCql = (String) map.get(QueryTemplateAttributes.TEMPLATE_CQL);
+
+    if (title == null || description == null || resultDescriptors == null) {
+      throw new NullPointerException(
+          format(
+              "Null attribute detected, %n title: %s, %n description: %s %n resultDescriptors: %s",
+              title, description, resultDescriptors));
+    }
+
+    if (queryDescriptors != null && templateCql != null) {
+      return new QueryTemplateMetacardImpl(title, description)
+          .setResultDescriptors(resultDescriptors)
+          .setQueryDescriptors(queryDescriptors)
+          .setTemplateCql(templateCql);
+    }
+    return new ResultTemplateMetacardImpl(title, description)
+        .setResultDescriptors(resultDescriptors);
+  }
+
+  private Map<String, Object> templateToMap(Metacard metacard) {
+    Map<String, Object> json = new HashMap<>();
+
+    if (!(metacard instanceof ResultTemplateMetacardImpl)) {
+      throw new IllegalArgumentException("Expecting some type of template metacard");
+    }
+
+    json.put(CoreAttributes.TITLE, metacard.getTitle());
+    json.put(
+        CoreAttributes.DESCRIPTION, metacard.getAttribute(CoreAttributes.DESCRIPTION).getValue());
+
+    ResultTemplateMetacardImpl resultTemplateMetacard = (ResultTemplateMetacardImpl) metacard;
+    json.put(
+        ResultTemplateAttributes.RESULT_DESCRIPTORS, resultTemplateMetacard.getResultDescriptors());
+
+    if (metacard instanceof QueryTemplateMetacardImpl) {
+      QueryTemplateMetacardImpl queryTemplateMetacard = (QueryTemplateMetacardImpl) metacard;
+      json.put(QueryTemplateAttributes.TEMPLATE_CQL, queryTemplateMetacard.getTemplateCql());
+      json.put(
+          QueryTemplateAttributes.QUERY_DESCRIPTORS, queryTemplateMetacard.getQueryDescriptors());
+    }
+
+    return json;
+  }
+
   @Override
   public void init() {
+    post(
+        "/templates",
+        APPLICATION_JSON,
+        (req, res) -> {
+          Map<String, Object> incoming =
+              JsonFactory.create().parser().parseMap(util.safeGetBody(req));
+          Metacard saved = saveMetacard(mapToTemplate(incoming));
+          Map<String, Object> response = templateToMap(saved);
+
+          res.status(201);
+          return util.getJson(response);
+        });
+
+    put(
+        "/templates/:id",
+        APPLICATION_JSON,
+        (req, res) -> {
+          String id = req.params(":id");
+
+          Map<String, Object> input =
+              JsonFactory.create().parser().parseMap(util.safeGetBody(req));
+
+          Metacard metacard = mapToTemplate(input);
+          metacard.setAttribute(new AttributeImpl(Metacard.ID, id));
+
+          Metacard updated = updateMetacard(id, metacard);
+          return util.getJson(transformer.transform(updated));
+        });
+
+    delete(
+        "/templates/:id",
+        APPLICATION_JSON,
+        (req, res) -> {
+          String id = req.params(":id");
+          catalogFramework.delete(new DeleteRequestImpl(id));
+          return ImmutableMap.of("message", "Successfully deleted.");
+        },
+        util::getJson);
+
     get(
         "/metacardtype",
         (req, res) -> {
@@ -391,8 +488,7 @@ public class MetacardApplication implements SparkApplication {
           }
           String id = req.params(":id");
           subscriptions.addEmail(id, email);
-          return ImmutableMap.of(
-              "message", String.format("Successfully subscribed to id = %s.", id));
+          return ImmutableMap.of("message", format("Successfully subscribed to id = %s.", id));
         },
         util::getJson);
 
@@ -405,8 +501,7 @@ public class MetacardApplication implements SparkApplication {
           }
           String id = req.params(":id");
           subscriptions.removeEmail(id, email);
-          return ImmutableMap.of(
-              "message", String.format("Successfully un-subscribed to id = %s.", id));
+          return ImmutableMap.of("message", format("Successfully un-subscribed to id = %s.", id));
         },
         util::getJson);
 
@@ -522,7 +617,7 @@ public class MetacardApplication implements SparkApplication {
     get(
         "/localcatalogid",
         (req, res) -> {
-          return String.format("{\"%s\":\"%s\"}", "local-catalog-id", catalogFramework.getId());
+          return format("{\"%s\":\"%s\"}", "local-catalog-id", catalogFramework.getId());
         });
 
     post(
@@ -569,8 +664,7 @@ public class MetacardApplication implements SparkApplication {
 
           // Respond with content
           res.type("text/csv");
-          String attachment =
-              String.format("attachment;filename=export-%s.csv", Instant.now().toString());
+          String attachment = format("attachment;filename=export-%s.csv", Instant.now().toString());
           res.header("Content-Disposition", attachment);
           if (shouldGzip) {
             res.raw().addHeader("Content-Encoding", "gzip");

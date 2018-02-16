@@ -46,6 +46,7 @@
             <property name="username" value=""/>
             <property name="password" value=""/>
             <property name="disableCnCheck" value="false"/>
+            <property name="allowRedirects" value="false"/>
             <property name="forcedFeatureType" value=""/>
             <property name="nonQueryableProperties">
                 <list/>
@@ -58,6 +59,7 @@
             <argument ref="encryptionService"/>
             <property name="coordinateOrder" value="LAT_LON"/>
             <property name="metacardTypeEnhancers" ref="metacardTypeEnhancerList"/>
+            <property name="srsName" value="EPSG:4326"/>
             <cm:managed-properties persistent-id="" update-strategy="component-managed"
                                    update-method="refresh"/>
         </cm:managed-component>

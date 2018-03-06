@@ -534,6 +534,8 @@ public class MetacardApplication implements SparkApplication {
           Map<String, Object> transformMap = mapper.parser().parseMap(body);
           queryTransform.setMetacards((List<Map<String, Object>>) transformMap.get("metacards"));
 
+
+
           List<Result> metacards =
               queryTransform
                   .getTransformedMetacards(types, attributeRegistry)

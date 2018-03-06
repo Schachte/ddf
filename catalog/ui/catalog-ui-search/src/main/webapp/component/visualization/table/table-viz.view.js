@@ -138,12 +138,15 @@ module.exports = Marionette.LayoutView.extend({
             columnAliasMap: properties.attributeAliases,
             metacards: this.options.selectionInterface.getActiveSearchResults().toJSON()
         };
-        $.ajax({
-            type: "POST",
-            url: '/search/catalog/internal/transform/csv?_=' + Date.now(),
-            data: JSON.stringify(data),
-            contentType: 'application/json',
-            success: this.saveExport
-        })
+        console.log("EXPORTING")
+        console.log(data)
+
+        // $.ajax({
+        //     type: "POST",
+        //     url: '/search/catalog/internal/transform/csv?_=' + Date.now(),
+        //     data: JSON.stringify(data),
+        //     contentType: 'application/json',
+        //     success: this.saveExport
+        // })
     }
 });

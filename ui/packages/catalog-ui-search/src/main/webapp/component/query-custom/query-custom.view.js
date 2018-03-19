@@ -24,12 +24,19 @@ define([
     'js/cql',
     'js/store',
     'component/query-settings/query-settings.view',
-    'component/query-advanced/query-advanced.view'
+    'component/query-advanced/query-advanced.view',
+    'component/singletons/user-instance',
+    'component/announcement'
 ], function (Marionette, _, $, template, CustomElements, FilterBuilderView, FilterBuilderModel, cql,
-            store, QuerySettingsView, QueryAdvanced) {
+            store, QuerySettingsView, QueryAdvanced, user, announcement) {
 
     return QueryAdvanced.extend({
+
         template: template,
+        events: {
+            'click .make-default-form': 'makeDefaultSearchForm',
+            'click .clear-default-form': 'clearDefaultSearchForm'
+        },
         onBeforeShow: function(){
             this.model = this.model._cloneOf ? store.getQueryById(this.model._cloneOf) : this.model;
             this.querySettings.show(new QuerySettingsView({
@@ -39,12 +46,15 @@ define([
                 model: new FilterBuilderModel()
             }));
 
-            if (this.options.filterTemplate) {
+            if (this.model.get('filterTemplate')) {
                 this.setCqlFromFilter(this.options.filterTemplate);
+                // this.setCqlFromFilter(this.model.get('filterTemplate'));
+                // this.model.unset('filterTemplate');
             } else if (this.model.get('cql')) {
                 this.queryAdvanced.currentView.deserialize(cql.simplify(cql.read(this.model.get('cql'))));
             }
 
+            this.checkIfDefaultSearchForm();
             this.querySettings.currentView.turnOffEditing();
             this.queryAdvanced.currentView.turnOffEditing();
             this.edit();
@@ -64,6 +74,53 @@ define([
             this.model.set({
                 cql: filter
             });
+        },
+        checkIfDefaultSearchForm: function() {
+            var storedTemplate = user.getQuerySettings().toJSON();
+            var currentTemplate = JSON.parse(JSON.stringify(this.model));
+
+            if (storedTemplate['defaultTemplate'] != undefined &&
+                storedTemplate['defaultTemplate'].templateTitle == currentTemplate.templateTitle) {
+                    this.$('.make-default-form').css({'display': 'none'});
+                } else {
+                    this.$('.make-default-form').css({'display': 'inline-block'});
+                }
+        },
+        makeDefaultSearchForm: function() {
+            var templateJSON = JSON.parse(JSON.stringify(this.model));
+            user.getQuerySettings().set('defaultTemplate', templateJSON);
+            user.savePreferences();
+            this.messageNotifier(
+                'Success!', 
+                `\"${templateJSON.templateTitle}\" Saved As Default Query Form`, 
+                'success'
+            );
+        },
+        clearDefaultSearchForm: function() {
+            user.getQuerySettings().set('defaultTemplate', null);
+            user.savePreferences();
+            this.messageNotifier(
+                'Success!', 
+                `Default Query Form Cleared`, 
+                'success'
+            );
+            this.checkIfDefaultSearchForm();
+        },
+        messageNotifier: function(title, message, type) {
+            announcement.announce({
+                title: title,
+                message: message,
+                type: type
+            });
+            this.checkIfDefaultSearchForm();
+        },
+        serializeData: function() {
+            var templateTitle = this.model.get('templateTitle') != null
+                                 ? this.model.get('templateTitle')
+                                 : "Standard Search";
+            return {
+                templateTitle: templateTitle
+            };
         }
     });
 });

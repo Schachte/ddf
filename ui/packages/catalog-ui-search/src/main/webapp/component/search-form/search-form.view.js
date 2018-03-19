@@ -43,11 +43,13 @@
                 user.getQuerySettings().set('type', 'text');
                 break;
             case 'custom':
-                var oldType = this.options.queryModel.get('type');
                 this.options.queryModel.set({
                     type: 'custom',
+                    filterTemplate: this.model.get('filterTemplate'),
+                    templateTitle: this.model.get('name'),
                     title: this.model.get('name')
-                });
+                })
+
                 user.getQuerySettings().set({
                     type: 'custom',
                     template: this.model.toJSON()

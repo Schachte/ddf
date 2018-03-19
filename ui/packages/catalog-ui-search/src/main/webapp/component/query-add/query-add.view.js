@@ -26,8 +26,9 @@ var store = require('js/store');
 var QueryConfirmationView = require('component/confirmation/query/confirmation.query.view');
 var LoadingView = require('component/loading/loading.view');
 var wreqr = require('wreqr');
+var user = require('component/singletons/user-instance');
+var _ = require('underscore');
 const cql = require('js/cql');
-const user = require('component/singletons/user-instance');
 
 module.exports = Marionette.LayoutView.extend({
     template: template,
@@ -105,7 +106,21 @@ module.exports = Marionette.LayoutView.extend({
         }));
     },
     focus: function () {
+        this.loadDefaultTemplate();
         this.queryContent.currentView.focus();
+    },
+    loadDefaultTemplate: function() {
+        var defaultTemplate = user.getQuerySettings().get('defaultTemplate');
+
+        if (defaultTemplate) {
+            switch (defaultTemplate.type) {
+                case "custom":
+                    this.queryContent.show(new QueryCustom({
+                        model: new Query.Model(defaultTemplate)
+                    }));
+                break;
+            }
+        }
     },
     edit: function () {
         this.$el.addClass('is-editing');

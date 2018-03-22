@@ -24,12 +24,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import org.codice.ddf.catalog.ui.metacard.sharing.ShareableMetacardAttributes;
+import org.codice.ddf.catalog.ui.metacard.sharing.ShareableMetacardImpl;
 import org.junit.Before;
 import org.junit.Test;
 
 public class WorkspaceMetacardImplTest {
 
-  private WorkspaceMetacardImpl workspace;
+  private ShareableMetacardImpl workspace;
 
   @Before
   public void setUp() {
@@ -38,9 +40,9 @@ public class WorkspaceMetacardImplTest {
 
   @Test
   public void testIsWorkspaceMetacard() {
-    assertThat(WorkspaceMetacardImpl.isWorkspaceMetacard(null), is(false));
-    assertThat(WorkspaceMetacardImpl.isWorkspaceMetacard(new MetacardImpl()), is(false));
-    assertThat(WorkspaceMetacardImpl.isWorkspaceMetacard(workspace), is(true));
+    assertThat(WorkspaceMetacardImpl.isShareableMetacard(null), is(false));
+    assertThat(WorkspaceMetacardImpl.isShareableMetacard(new MetacardImpl()), is(false));
+    assertThat(WorkspaceMetacardImpl.isShareableMetacard(workspace), is(true));
   }
 
   @Test
@@ -66,7 +68,7 @@ public class WorkspaceMetacardImplTest {
   @Test
   public void testQueries() {
     List<String> queries = Arrays.asList("Query 1", "Query 1");
-    assertThat(workspace.setQueries(queries).getQueries(), is(queries));
+    assertThat(((WorkspaceMetacardImpl) workspace).setQueries(queries).getQueries(), is(queries));
   }
 
   @Test
@@ -82,7 +84,7 @@ public class WorkspaceMetacardImplTest {
     WorkspaceMetacardImpl m =
         WorkspaceMetacardImpl.from(
             ImmutableMap.of(
-                WorkspaceAttributes.WORKSPACE_SHARING, ImmutableList.of("<xml2/>", "<xml3/>")));
+                ShareableMetacardAttributes.FORM_SHARING, ImmutableList.of("<xml2/>", "<xml3/>")));
 
     Set<String> diff = ImmutableSet.of("<xml1/>", "<xml3/>");
 

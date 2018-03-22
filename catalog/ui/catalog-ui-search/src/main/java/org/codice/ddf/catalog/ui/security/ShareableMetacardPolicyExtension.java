@@ -30,24 +30,24 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-public class WorkspacePolicyExtension implements PolicyExtension {
+public class ShareableMetacardPolicyExtension implements PolicyExtension {
 
   private static final Set<String> METACARD_PERMISSION_IMPLIED =
-      ImmutableSet.of(Constants.IS_WORKSPACE);
+      ImmutableSet.of(Constants.IS_SHAREABLE);
 
   private static final Set<String> SHARED_PERMISSIONS_IMPLIED =
       ImmutableSet.of(
-          Constants.IS_WORKSPACE,
+          Constants.IS_SHAREABLE,
           Core.METACARD_OWNER,
           SecurityAttributes.ACCESS_INDIVIDUALS,
           SecurityAttributes.ACCESS_GROUPS);
 
-  private WorkspaceSecurityConfiguration config;
+  private ShareableMetacardSecurityConfiguration config;
 
   private SubjectIdentity subjectIdentity;
 
-  public WorkspacePolicyExtension(
-      WorkspaceSecurityConfiguration config, SubjectIdentity subjectIdentity) {
+  public ShareableMetacardPolicyExtension(
+      ShareableMetacardSecurityConfiguration config, SubjectIdentity subjectIdentity) {
     this.config = config;
     this.subjectIdentity = subjectIdentity;
   }
@@ -103,8 +103,8 @@ public class WorkspacePolicyExtension implements PolicyExtension {
     List<KeyValuePermission> permissions = getPermissions(allPerms);
     Map<String, Set<String>> grouped = groupPermissionsByKey(permissions);
 
-    if (!grouped.containsKey(Constants.IS_WORKSPACE)) {
-      return match; // ignore all but workspace permissions
+    if (!grouped.containsKey(Constants.IS_SHAREABLE)) {
+      return match; // ignore all but shareable permissions
     }
 
     Predicate<CollectionPermission> isSystem = system();

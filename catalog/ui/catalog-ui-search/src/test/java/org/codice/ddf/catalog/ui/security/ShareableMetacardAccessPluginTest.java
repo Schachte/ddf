@@ -35,13 +35,13 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Map;
 import org.apache.shiro.authz.Permission;
-import org.codice.ddf.catalog.ui.metacard.workspace.WorkspaceAttributes;
-import org.codice.ddf.catalog.ui.metacard.workspace.WorkspaceMetacardImpl;
+import org.codice.ddf.catalog.ui.metacard.sharing.ShareableMetacardAttributes;
+import org.codice.ddf.catalog.ui.metacard.sharing.ShareableMetacardImpl;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-public class WorkspaceAccessPluginTest {
+public class ShareableMetacardAccessPluginTest {
 
   private Subject subject;
 
@@ -52,7 +52,7 @@ public class WorkspaceAccessPluginTest {
     subject = mock(Subject.class);
 
     accessPlugin =
-        new WorkspaceAccessPlugin() {
+        new ShareableMetacardAccessPlugin() {
           @Override
           protected Subject getSubject() {
             return subject;
@@ -67,11 +67,11 @@ public class WorkspaceAccessPluginTest {
   }
 
   @Test
-  public void testIgnoreNonWorkspaceMetacards() throws Exception {
+  public void testIgnoreNonShareableMetacards() throws Exception {
     Map<String, Metacard> updates = ImmutableMap.of("rand", new MetacardImpl());
     UpdateRequest update = mockUpdateRequest(updates);
 
-    // should ignore all non-workspace metacards and do nothing
+    // should ignore all non-shareable metacards and do nothing
     accessPlugin.processPreUpdate(update, updates);
   }
 
@@ -82,10 +82,10 @@ public class WorkspaceAccessPluginTest {
     Map<String, Serializable> attrs =
         ImmutableMap.of(Metacard.ID, id, Core.METACARD_OWNER, "guest");
 
-    Map<String, Metacard> updates = ImmutableMap.of(id, WorkspaceMetacardImpl.from(attrs));
+    Map<String, Metacard> updates = ImmutableMap.of(id, ShareableMetacardImpl.from(attrs));
     UpdateRequest update = mockUpdateRequest(updates);
 
-    // should ignore any workspace metacards with no updated roles
+    // should ignore any shareable metacards with no updated roles
     accessPlugin.processPreUpdate(update, updates);
   }
 
@@ -93,24 +93,24 @@ public class WorkspaceAccessPluginTest {
   public void testPermittedWhenOwnerOnUpdatedRoles() throws Exception {
     String id = "0";
 
-    WorkspaceMetacardImpl before =
-        WorkspaceMetacardImpl.from(
+    ShareableMetacardImpl before =
+        ShareableMetacardImpl.from(
             ImmutableMap.of(
                 Metacard.ID,
                 id,
                 Core.METACARD_OWNER,
                 "before",
-                WorkspaceAttributes.WORKSPACE_SHARING,
+                ShareableMetacardAttributes.FORM_SHARING,
                 ImmutableList.of()));
 
-    WorkspaceMetacardImpl after =
-        WorkspaceMetacardImpl.from(
+    ShareableMetacardImpl after =
+        ShareableMetacardImpl.from(
             ImmutableMap.of(
                 Metacard.ID,
                 id,
                 Core.METACARD_OWNER,
                 "after",
-                WorkspaceAttributes.WORKSPACE_SHARING,
+                ShareableMetacardAttributes.FORM_SHARING,
                 ImmutableList.of("<xml/>")));
 
     UpdateRequest update = mockUpdateRequest(ImmutableMap.of(id, after));
@@ -134,24 +134,24 @@ public class WorkspaceAccessPluginTest {
   public void testStopProcessingWhenNotOwner() throws Exception {
     String id = "0";
 
-    WorkspaceMetacardImpl before =
-        WorkspaceMetacardImpl.from(
+    ShareableMetacardImpl before =
+        ShareableMetacardImpl.from(
             ImmutableMap.of(
                 Metacard.ID,
                 id,
                 Core.METACARD_OWNER,
                 "owner",
-                WorkspaceAttributes.WORKSPACE_SHARING,
+                ShareableMetacardAttributes.FORM_SHARING,
                 ImmutableList.of()));
 
-    WorkspaceMetacardImpl after =
-        WorkspaceMetacardImpl.from(
+    ShareableMetacardImpl after =
+        ShareableMetacardImpl.from(
             ImmutableMap.of(
                 Metacard.ID,
                 id,
                 Core.METACARD_OWNER,
                 "owner",
-                WorkspaceAttributes.WORKSPACE_SHARING,
+                ShareableMetacardAttributes.FORM_SHARING,
                 ImmutableList.of("<xml/>")));
 
     UpdateRequest update = mockUpdateRequest(ImmutableMap.of(id, after));
@@ -165,11 +165,11 @@ public class WorkspaceAccessPluginTest {
   public void testSetOwnerRole() throws Exception {
     String id = "0";
 
-    WorkspaceMetacardImpl before =
-        WorkspaceMetacardImpl.from(ImmutableMap.of(Metacard.ID, id, Core.METACARD_OWNER, "user1"));
+    ShareableMetacardImpl before =
+        ShareableMetacardImpl.from(ImmutableMap.of(Metacard.ID, id, Core.METACARD_OWNER, "user1"));
 
-    WorkspaceMetacardImpl after =
-        WorkspaceMetacardImpl.from(ImmutableMap.of(Metacard.ID, id, Core.METACARD_OWNER, "user2"));
+    ShareableMetacardImpl after =
+        ShareableMetacardImpl.from(ImmutableMap.of(Metacard.ID, id, Core.METACARD_OWNER, "user2"));
 
     UpdateRequest update = mockUpdateRequest(ImmutableMap.of(id, after));
 

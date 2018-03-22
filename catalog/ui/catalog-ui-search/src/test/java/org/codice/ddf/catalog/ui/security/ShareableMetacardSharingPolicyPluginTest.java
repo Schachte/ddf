@@ -24,11 +24,11 @@ import ddf.catalog.plugin.PolicyPlugin;
 import ddf.catalog.plugin.PolicyResponse;
 import java.util.Collections;
 import java.util.Map;
-import org.codice.ddf.catalog.ui.metacard.workspace.WorkspaceMetacardImpl;
+import org.codice.ddf.catalog.ui.metacard.sharing.ShareableMetacardImpl;
 import org.junit.Before;
 import org.junit.Test;
 
-public class WorkspaceSharingPolicyPluginTest {
+public class ShareableMetacardSharingPolicyPluginTest {
 
   private Map properties;
 
@@ -37,31 +37,31 @@ public class WorkspaceSharingPolicyPluginTest {
   @Before
   public void setUp() {
     properties = mock(Map.class);
-    plugin = new WorkspaceSharingPolicyPlugin();
+    plugin = new ShareableMetacardSharingPolicyPlugin();
   }
 
   @Test
   public void testOwnerOnCreate() throws Exception {
     String email = "a@b.c";
-    WorkspaceMetacardImpl workspace = new WorkspaceMetacardImpl();
-    workspace.setOwner(email);
-    PolicyResponse response = plugin.processPreCreate(workspace, properties);
+    ShareableMetacardImpl shareableMetacard = new ShareableMetacardImpl();
+    shareableMetacard.setOwner(email);
+    PolicyResponse response = plugin.processPreCreate(shareableMetacard, properties);
     assertThat(response.itemPolicy(), is(Collections.emptyMap()));
   }
 
   @Test
   public void testOwnerOnUpdate() throws Exception {
     String email = "a@b.c";
-    WorkspaceMetacardImpl workspace = new WorkspaceMetacardImpl();
-    workspace.setOwner(email);
-    PolicyResponse response = plugin.processPreUpdate(workspace, properties);
+    ShareableMetacardImpl shareableMetacard = new ShareableMetacardImpl();
+    shareableMetacard.setOwner(email);
+    PolicyResponse response = plugin.processPreUpdate(shareableMetacard, properties);
     assertThat(
         response.itemPolicy(),
         is(
             ImmutableMap.of(
                 Core.METACARD_OWNER,
                 ImmutableSet.of(email),
-                Constants.IS_WORKSPACE,
-                ImmutableSet.of(Constants.IS_WORKSPACE))));
+                Constants.IS_SHAREABLE,
+                ImmutableSet.of(Constants.IS_SHAREABLE))));
   }
 }

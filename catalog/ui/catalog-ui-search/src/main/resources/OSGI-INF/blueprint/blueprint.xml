@@ -75,7 +75,7 @@
     </service>
 
     <bean id="workspacePreIngestPlugin"
-          class="org.codice.ddf.catalog.ui.security.WorkspacePreIngestPlugin">
+          class="org.codice.ddf.catalog.ui.security.ShareablePreIngestPlugin">
         <argument ref="subjectIdentity"/>
     </bean>
 
@@ -93,7 +93,7 @@
     </service>
 
     <bean id="workspaceAccessPlugin"
-          class="org.codice.ddf.catalog.ui.security.WorkspaceAccessPlugin">
+          class="org.codice.ddf.catalog.ui.security.ShareableMetacardAccessPlugin">
     </bean>
 
     <service interface="ddf.catalog.plugin.AccessPlugin">
@@ -101,11 +101,11 @@
     </service>
 
     <service interface="ddf.catalog.plugin.PolicyPlugin">
-        <bean class="org.codice.ddf.catalog.ui.security.WorkspaceSharingPolicyPlugin" />
+        <bean class="org.codice.ddf.catalog.ui.security.ShareableMetacardSharingPolicyPlugin"/>
     </service>
 
     <bean id="workspaceSecurityConfiguration"
-          class="org.codice.ddf.catalog.ui.security.WorkspaceSecurityConfiguration">
+          class="org.codice.ddf.catalog.ui.security.ShareableMetacardSecurityConfiguration">
         <cm:managed-properties
                 persistent-id="org.codice.ddf.catalog.ui.security"
                 update-strategy="container-managed"/>
@@ -114,9 +114,9 @@
     <reference id="subjectIdentity" interface="ddf.security.SubjectIdentity"/>
 
     <bean id="workspacePolicyExtension"
-          class="org.codice.ddf.catalog.ui.security.WorkspacePolicyExtension">
-        <argument ref="workspaceSecurityConfiguration" />
-        <argument ref="subjectIdentity" />
+          class="org.codice.ddf.catalog.ui.security.ShareableMetacardPolicyExtension">
+        <argument ref="workspaceSecurityConfiguration"/>
+        <argument ref="subjectIdentity"/>
     </bean>
 
 

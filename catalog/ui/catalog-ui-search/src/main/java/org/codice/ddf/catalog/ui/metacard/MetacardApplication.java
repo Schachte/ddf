@@ -117,6 +117,7 @@ import org.codice.ddf.catalog.ui.metacard.history.HistoryResponse;
 import org.codice.ddf.catalog.ui.metacard.notes.NoteConstants;
 import org.codice.ddf.catalog.ui.metacard.notes.NoteMetacard;
 import org.codice.ddf.catalog.ui.metacard.notes.NoteUtil;
+import org.codice.ddf.catalog.ui.metacard.sharing.ShareableMetacardAttributes;
 import org.codice.ddf.catalog.ui.metacard.transform.CsvTransform;
 import org.codice.ddf.catalog.ui.metacard.validation.Validator;
 import org.codice.ddf.catalog.ui.metacard.workspace.WorkspaceAttributes;
@@ -477,6 +478,28 @@ public class MetacardApplication implements SparkApplication {
 
           res.status(201);
           return util.getJson(response);
+        });
+
+    put(
+        "/sharing/:id",
+        APPLICATION_JSON,
+        (req, res) -> {
+          String id = req.params(":id");
+
+          Map<String, Object> workspace =
+              JsonFactory.create().parser().parseMap(util.safeGetBody(req));
+
+          Metacard metacard = transformer.transform(workspace);
+          metacard.setAttribute(new AttributeImpl(Metacard.ID, id));
+          if (isShareableMetacard(metacard)) {
+            Metacard updated = updateMetacard(id, metacard);
+            return util.getJson(transformer.transform(updated));
+          } else {
+            res.status(401);
+            return util.getResponseWrapper(
+                ERROR_RESPONSE_TYPE,
+                "This type of resource is not able to be shared amongst other users.");
+          }
         });
 
     put(
@@ -988,6 +1011,11 @@ public class MetacardApplication implements SparkApplication {
         .getType()
         .getAttributeFormat()
         .equals(AttributeType.AttributeFormat.DATE);
+  }
+
+  private boolean isShareableMetacard(Metacard inputMetacard) {
+    return inputMetacard != null
+        && inputMetacard.getTags().stream().anyMatch(ShareableMetacardAttributes.NAME::equals);
   }
 
   private List<Result> getMetacardHistory(String id) {

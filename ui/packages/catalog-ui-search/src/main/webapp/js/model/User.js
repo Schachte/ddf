@@ -27,9 +27,10 @@ define([
     'js/model/Theme',
     'js/ThemeUtils',
     'js/model/QuerySettings',
+    'js/model/QueryTemplateSecurity',
     'backboneassociations'
 ], function (_, _get, wreqr, Backbone, properties, Alert, Common, UploadBatch, announcement, BlackListItem, moment, Theme, ThemeUtils,
-    QuerySettings) {
+    QuerySettings, QueryTemplateSecurity) {
     'use strict';
 
     var User = {};
@@ -150,7 +151,8 @@ define([
                 theme: new Theme(),
                 animation: true,
                 hoverPreview: true,
-                querySettings: new QuerySettings()
+                querySettings: new QuerySettings(),
+                queryTemplateSecurity: new QueryTemplateSecurity()
             };
         },
         relations: [
@@ -184,6 +186,11 @@ define([
                 type: Backbone.One,
                 key: 'querySettings',
                 relatedModel: QuerySettings
+            },
+            {
+                type: Backbone.One,
+                key: 'queryTemplateSecurity',
+                relatedModel: QueryTemplateSecurity
             }
         ],
         initialize: function(){
@@ -269,6 +276,9 @@ define([
         getQuerySettings: function() {
             return this.get('querySettings');
         },
+        getQueryTemplateSecurity: function() {
+            return this.get('queryTemplateSecurity');
+        },
         parse: function(data, options){
             if (options && options.drop) {
                 return {};
@@ -312,6 +322,9 @@ define([
         },
         getQuerySettings: function() {
             return this.get('preferences').getQuerySettings();
+        },
+        getQueryTemplateSecurity: function() {
+            return this.get('preferences').getQueryTemplateSecurity();
         }
     });
 
@@ -351,6 +364,9 @@ define([
         },
         getQuerySettings: function() {
             return this.get('user').getQuerySettings();
+        },
+        getQueryTemplateSecurity: function() {
+            return this.get('user').getQueryTemplateSecurity();
         },
         getSummaryShown: function(){
             return this.get('user').getSummaryShown();

@@ -412,7 +412,7 @@ public class MetacardApplication implements SparkApplication {
         util::getJson);
 
     get(
-        "/workspaces/:id",
+        "/workspaces/:id          String id = req.params(\":id\");\n",
         (req, res) -> {
           String id = req.params(":id");
           String email = getSubjectEmail();
@@ -482,35 +482,34 @@ public class MetacardApplication implements SparkApplication {
 
     put(
         "/sharing/:id",
-        APPLICATION_JSON,
         (req, res) -> {
-
-          /**
-           * Ideally, when we invoke any sharing functionality from the UI for
-           * workspaces/search-forms/anything shareable we will hit this endpoint and create an
-           * update request. The request will invoke:
-           *
-           * <p>- ShareableMetacardAccessPlugin - ShareableMetacardPolicyExtension -
-           * ShareableMetacardcardSharingPolicyPlugin - ShareableMetacardPreIngestPlugin
-           *
-           * <p>This way, we can decouple sharing requests specific to workspaces and reflect the UI
-           * accordingly.
-           */
           String id = req.params(":id");
 
-          Map<String, Object> workspace =
+          Map<String, Object> queryTemplate =
               JsonFactory.create().parser().parseMap(util.safeGetBody(req));
 
-          Metacard metacard = transformer.transform(workspace);
-          metacard.setAttribute(new AttributeImpl(Core.ID, id));
+          Metacard metacard = util.getMetacard(id);
 
           if (isShareableMetacard(metacard)) {
-            Metacard updated = updateMetacard(id, metacard);
-            return util.getJson(transformer.transform(updated));
+            metacard.setAttribute(
+                new AttributeImpl(
+                    SecurityAttributes.ACCESS_INDIVIDUALS,
+                    getSecurityAttributes(queryTemplate, SecurityAttributes.ACCESS_INDIVIDUALS)));
+
+            metacard.setAttribute(
+                new AttributeImpl(
+                    SecurityAttributes.ACCESS_GROUPS,
+                    getSecurityAttributes(queryTemplate, SecurityAttributes.ACCESS_GROUPS)));
+
+            updateMetacard(id, metacard);
+
+            // TODO: Change this response message to something that has meaning
+            return util.getJson("Updated");
+
           } else {
             res.status(401);
             return util.getResponseWrapper(
-                ERROR_RESPONSE_TYPE, "This type of resource cannot be shared.");
+                ERROR_RESPONSE_TYPE, "This type of metacard cannot be shared.");
           }
         });
 
@@ -946,6 +945,19 @@ public class MetacardApplication implements SparkApplication {
       LOGGER.debug("Could not delete the deleted metacard marker", e);
     }
     LOGGER.trace("Deleted delete marker metacard successfully");
+  }
+
+  private List<Serializable> getSecurityAttributes(
+      Map<String, Object> inputTemplate, String securityAccess) {
+    return inputTemplate
+        .entrySet()
+        .stream()
+        .filter(obj -> obj.getKey().contains(securityAccess))
+        .map(Map.Entry::getValue)
+        .map(List.class::cast)
+        .flatMap(List::stream)
+        .map(Object::toString)
+        .collect(Collectors.toList());
   }
 
   /**

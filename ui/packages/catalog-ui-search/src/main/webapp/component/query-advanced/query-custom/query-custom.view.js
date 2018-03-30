@@ -24,13 +24,18 @@ define([
     'js/cql',
     'js/store',
     'component/query-settings/query-settings.view',
-    'component/query-advanced/query-advanced.view'
+    'component/query-advanced/query-advanced.view',
+    'component/lightbox/lightbox.view.instance',
+    'component/query-template-sharing/query-template-sharing.view'
 ], function (Marionette, _, $, template, CustomElements, FilterBuilderView, FilterBuilderModel, cql,
-            store, QuerySettingsView, QueryAdvanced) {
+            store, QuerySettingsView, QueryAdvanced, lightboxInstance, QueryTemplateSharing) {
 
     return QueryAdvanced.extend({
         template: template,
         className: 'is-custom',
+        events: {
+            'click .open-sharing': 'handleShare',
+        },
         onBeforeShow: function(){
             this.model = this.model._cloneOf ? store.getQueryById(this.model._cloneOf) : this.model;
             this.querySettings.show(new QuerySettingsView({
@@ -65,6 +70,14 @@ define([
             this.model.set({
                 cql: filter
             });
+        },
+        handleShare: function() {
+            lightboxInstance.model.updateTitle('Query Template Sharing');
+            lightboxInstance.model.open();
+            lightboxInstance.lightboxContent.show(new QueryTemplateSharing({
+                model: this.model,
+                templateId: this.model.get('modelId')
+            }));
         }
     });
 });

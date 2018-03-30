@@ -18,8 +18,11 @@ import static org.codice.ddf.catalog.ui.forms.data.QueryTemplateType.QUERY_TEMPL
 
 import ddf.catalog.data.Metacard;
 import ddf.catalog.data.types.Core;
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import org.codice.ddf.catalog.ui.metacard.sharing.ShareableMetacardAttributes;
+import org.codice.ddf.catalog.ui.metacard.sharing.ShareableMetacardImpl;
 
 /**
  * Metacard used for storing query templates in the catalog. Should not be used as a resource.
@@ -41,12 +44,16 @@ import java.util.List;
  * <p><i>This code is experimental. While it is functional and tested, it may change or be removed
  * in a future version of the library.</i>
  */
-public class QueryTemplateMetacard extends ShareableMetacard {
+public class QueryTemplateMetacard extends ShareableMetacardImpl {
   public QueryTemplateMetacard(String title, String description) {
     super(new QueryTemplateType());
     setAttribute(Core.TITLE, title);
     setAttribute(Core.DESCRIPTION, description);
-    setTags(Collections.singleton(QUERY_TEMPLATE_TAG));
+
+    Set<String> setOfTags = new HashSet<>();
+    setOfTags.add(QUERY_TEMPLATE_TAG);
+    setOfTags.add(ShareableMetacardAttributes.NAME);
+    setTags(setOfTags);
   }
 
   public QueryTemplateMetacard(String title, String description, String id) {

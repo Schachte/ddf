@@ -9,16 +9,14 @@
  * <http://www.gnu.org/licenses/lgpl.html>.
  *
  **/
- /*global require*/
- var Tabs = require('component/tabs/tabs');
- var MySearchFormCollectionView = require('component/search-form/search-form-tab-container.view');
- var MySearchSharingFormCollectionView = require('component/search-form/forms-sharing/search-form-sharing-tab-container.view');
+/*global require*/
+var Backbone = require('backbone');
 
- module.exports = Tabs.extend({
-    defaults: {
-        tabs: {
-            'My Search Forms': MySearchFormCollectionView,
-            'Shared Templates': MySearchSharingFormCollectionView
-         }
+module.exports = Backbone.Model.extend({
+    defaults: function() {
+        return {
+            templates: [{}],
+            url: '/search/catalog/internal/sharing/'
+        };
     }
- });
+});

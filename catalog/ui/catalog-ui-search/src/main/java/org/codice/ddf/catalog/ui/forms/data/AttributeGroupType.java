@@ -21,6 +21,7 @@ import ddf.catalog.data.impl.MetacardTypeImpl;
 import ddf.catalog.data.impl.types.CoreAttributes;
 import ddf.catalog.data.impl.types.SecurityAttributes;
 import java.util.Set;
+import org.codice.ddf.catalog.ui.metacard.sharing.ShareableMetacardAttributes;
 
 /**
  * A shareable list of attribute descriptor names. They can represent sets of interesting fields.
@@ -51,7 +52,7 @@ public class AttributeGroupType extends MetacardTypeImpl {
         ImmutableSet.<AttributeDescriptor>builder()
             .addAll(new CoreAttributes().getAttributeDescriptors())
             .addAll(new SecurityAttributes().getAttributeDescriptors())
-            .addAll(new ShareableAttributes().getAttributeDescriptors())
+            .addAll(new ShareableMetacardAttributes().getAttributeDescriptors())
             .addAll(ATTRIBUTE_GROUP_DESCRIPTORS)
             .build());
   }

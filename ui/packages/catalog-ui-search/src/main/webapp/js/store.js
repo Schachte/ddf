@@ -90,6 +90,9 @@ define([
         getQueryById: function(queryId){
             return this.getCurrentQueries().get(queryId);
         },
+        getSecurityByTemplateId: function(templateId) {
+            console.log("Getting the template by the ID: " + templateId)
+        },
         getSelectedResults: function(){
             return this.get('content').get('selectedResults');
         },

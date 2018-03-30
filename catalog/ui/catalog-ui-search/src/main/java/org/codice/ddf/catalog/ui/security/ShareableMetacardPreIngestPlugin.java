@@ -30,30 +30,31 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.subject.Subject;
-import org.codice.ddf.catalog.ui.metacard.workspace.WorkspaceMetacardImpl;
+import org.codice.ddf.catalog.ui.metacard.sharing.ShareableMetacardImpl;
 
-public class WorkspacePreIngestPlugin implements PreIngestPlugin {
+public class ShareableMetacardPreIngestPlugin implements PreIngestPlugin {
 
   private final SubjectIdentity subjectIdentity;
 
-  public WorkspacePreIngestPlugin(SubjectIdentity subjectIdentity) {
+  public ShareableMetacardPreIngestPlugin(SubjectIdentity subjectIdentity) {
     this.subjectIdentity = subjectIdentity;
   }
 
-  private static Map<String, WorkspaceMetacardImpl> getPreviousWorkspaces(UpdateRequest request) {
+  private static Map<String, ShareableMetacardImpl> getPreviousShareableMetacards(
+      UpdateRequest request) {
     OperationTransaction operationTransaction =
         (OperationTransaction) request.getProperties().get(Constants.OPERATION_TRANSACTION_KEY);
 
     return operationTransaction
         .getPreviousStateMetacards()
         .stream()
-        .filter(WorkspaceMetacardImpl::isWorkspaceMetacard)
-        .map(WorkspaceMetacardImpl::from)
+        .filter(ShareableMetacardImpl::isShareableMetacard)
+        .map(ShareableMetacardImpl::from)
         .collect(Collectors.toMap(Metacard::getId, m -> m));
   }
 
   /**
-   * Ensures a workspace has an owner.
+   * Ensures a shareable metacard has an owner.
    *
    * @param request the {@link CreateRequest} to process
    * @return
@@ -66,20 +67,20 @@ public class WorkspacePreIngestPlugin implements PreIngestPlugin {
     Subject ownerSubject = getSubject();
     final String owner = subjectIdentity.getUniqueIdentifier(ownerSubject);
 
-    List<WorkspaceMetacardImpl> workspaces =
+    List<ShareableMetacardImpl> shareableMetacards =
         request
             .getMetacards()
             .stream()
-            .filter(WorkspaceMetacardImpl::isWorkspaceMetacard)
-            .map(WorkspaceMetacardImpl::from)
-            .filter(workspace -> StringUtils.isEmpty(workspace.getOwner()))
+            .filter(ShareableMetacardImpl::isShareableMetacard)
+            .map(ShareableMetacardImpl::from)
+            .filter(shareableMC -> StringUtils.isEmpty(shareableMC.getOwner()))
             .collect(Collectors.toList());
 
-    if (!workspaces.isEmpty() && isGuest(ownerSubject)) {
-      throw new StopProcessingException("Guest user not allowed to create workspaces");
+    if (!shareableMetacards.isEmpty() && isGuest(ownerSubject)) {
+      throw new StopProcessingException("Guest user not allowed to create shareable resources");
     }
 
-    workspaces.stream().forEach(workspace -> workspace.setOwner(owner));
+    shareableMetacards.stream().forEach(shareableMC -> shareableMC.setOwner(owner));
 
     return request;
   }
@@ -97,16 +98,16 @@ public class WorkspacePreIngestPlugin implements PreIngestPlugin {
   public UpdateRequest process(UpdateRequest request)
       throws PluginExecutionException, StopProcessingException {
 
-    Map<String, WorkspaceMetacardImpl> previous = getPreviousWorkspaces(request);
+    Map<String, ShareableMetacardImpl> previous = getPreviousShareableMetacards(request);
 
     request
         .getUpdates()
         .stream()
         .map(Map.Entry::getValue)
-        .filter(WorkspaceMetacardImpl::isWorkspaceMetacard)
-        .map(WorkspaceMetacardImpl::from)
-        .filter(workspace -> StringUtils.isEmpty(workspace.getOwner()))
-        .forEach(workspace -> workspace.setOwner(previous.get(workspace.getId()).getOwner()));
+        .filter(ShareableMetacardImpl::isShareableMetacard)
+        .map(ShareableMetacardImpl::from)
+        .filter(shareableMC -> StringUtils.isEmpty(shareableMC.getOwner()))
+        .forEach(shareableMC -> shareableMC.setOwner(previous.get(shareableMC.getId()).getOwner()));
 
     return request;
   }

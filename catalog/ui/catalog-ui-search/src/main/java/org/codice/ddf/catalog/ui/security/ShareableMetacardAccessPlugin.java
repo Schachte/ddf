@@ -34,9 +34,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.subject.Subject;
-import org.codice.ddf.catalog.ui.metacard.workspace.WorkspaceMetacardImpl;
+import org.codice.ddf.catalog.ui.metacard.sharing.ShareableMetacardImpl;
 
-public class WorkspaceAccessPlugin implements AccessPlugin {
+public class ShareableMetacardAccessPlugin implements AccessPlugin {
 
   protected Subject getSubject() {
     return SecurityUtils.getSubject();
@@ -49,7 +49,7 @@ public class WorkspaceAccessPlugin implements AccessPlugin {
     return new KeyValueCollectionPermission(CollectionPermission.UPDATE_ACTION, securityAttributes);
   }
 
-  private boolean isSharingUpdated(WorkspaceMetacardImpl previous, WorkspaceMetacardImpl update) {
+  private boolean isSharingUpdated(ShareableMetacardImpl previous, ShareableMetacardImpl update) {
     return !update.diffSharing(previous).isEmpty();
   }
 
@@ -66,25 +66,25 @@ public class WorkspaceAccessPlugin implements AccessPlugin {
   public UpdateRequest processPreUpdate(
       UpdateRequest input, Map<String, Metacard> existingMetacards) throws StopProcessingException {
 
-    Function<WorkspaceMetacardImpl, WorkspaceMetacardImpl> previous =
-        (update) -> WorkspaceMetacardImpl.from(existingMetacards.get(update.getId()));
+    Function<ShareableMetacardImpl, ShareableMetacardImpl> previous =
+        (update) -> ShareableMetacardImpl.from(existingMetacards.get(update.getId()));
 
     Set<String> notOwners =
         input
             .getUpdates()
             .stream()
             .map(Map.Entry::getValue)
-            .filter(WorkspaceMetacardImpl::isWorkspaceMetacard)
-            .map(WorkspaceMetacardImpl::from)
+            .filter(ShareableMetacardImpl::isShareableMetacard)
+            .map(ShareableMetacardImpl::from)
             .filter(update -> isSharingUpdated(previous.apply(update), update))
             .map(previous)
-            .map(WorkspaceMetacardImpl::getOwner)
+            .map(ShareableMetacardImpl::getOwner)
             .filter(this::isNotOwner)
             .collect(Collectors.toSet());
 
     if (!notOwners.isEmpty()) {
       throw new StopProcessingException(
-          "Cannot update workspace. Subject cannot change sharing permissions because they are not the owner.");
+          "Cannot update metacard. Subject cannot change sharing permissions because they are not the owner.");
     }
 
     return input;

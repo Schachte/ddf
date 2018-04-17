@@ -53,7 +53,7 @@ module.exports =  Marionette.ItemView.extend({
         },
         handleTrash: function() {
             var loginUser = user.get('user');
-            if(loginUser.get('username') === this.model.get('createdBy'))
+            if(loginUser.get('email') === this.model.get('createdBy'))
             {
                 this.listenTo(ConfirmationView.generateConfirmation({
                     prompt: 'This will permanently delete the template. Are you sure?',

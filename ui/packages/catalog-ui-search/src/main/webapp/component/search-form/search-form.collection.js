@@ -75,7 +75,15 @@ module.exports = Backbone.AssociatedModel.extend({
                     var utcSeconds = value.created / 1000;
                     var d = new Date(0);
                     d.setUTCSeconds(utcSeconds);
-                    this.addSearchForm(new SearchForm({createdOn: Common.getHumanReadableDate(d), id: value.id, name: value.title, type: 'custom', filterTemplate: value.filterTemplate}));
+                    this.addSearchForm(new SearchForm({
+                        createdOn: Common.getHumanReadableDate(d),
+                        id: value.id,
+                        name: value.title,
+                        type: 'custom',
+                        filterTemplate: value.filterTemplate,
+                        accessIndividuals: value.accessIndividuals,
+                        accessGroups: value.accessGroups
+                    }));
                 });
                 this.doneLoading();
             }

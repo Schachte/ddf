@@ -23,6 +23,8 @@ var  user = require('component/singletons/user-instance');
 var  LoadingView = require('component/loading/loading.view');
 var  announcement = require('component/announcement');
 var  ConfirmationView = require('component/confirmation/confirmation.view');
+var  lightboxInstance = require('component/lightbox/lightbox.view.instance');
+var  QueryTemplateSharing = require('component/query-template-sharing/query-template-sharing.view');
 
 module.exports =  Marionette.ItemView.extend({
         template: template,
@@ -35,7 +37,8 @@ module.exports =  Marionette.ItemView.extend({
             'click .interaction-default': 'handleMakeDefault',
             'click .interaction-clear': 'handleClearDefault',
             'click .interaction-trash': 'handleTrash',
-            'click .search-form-interaction': 'handleClick'
+            'click .interaction-share': 'handleShare',
+            'click': 'handleClick'
         },
         ui: {},
         initialize: function() {
@@ -53,7 +56,7 @@ module.exports =  Marionette.ItemView.extend({
             if(loginUser.get('username') === this.model.get('createdBy'))
             {
                 this.listenTo(ConfirmationView.generateConfirmation({
-                    prompt: 'This will permanently delete the template. Are you sure? ',
+                    prompt: 'This will permanently delete the template. Are you sure?',
                     no: 'Cancel',
                     yes: 'Delete'
                 }),
@@ -121,6 +124,19 @@ module.exports =  Marionette.ItemView.extend({
                 message: message,
                 type: type
             });
+        },
+        handleShare: function() {
+            lightboxInstance.model.updateTitle('Query Template Sharing');
+            lightboxInstance.model.open();
+            lightboxInstance.lightboxContent.show(new QueryTemplateSharing({
+                model: this.model,
+                permissions: {
+                    'accessIndividuals': this.model.get('accessIndividuals'),
+                    'accessGroups': this.model.get('accessGroups')
+                },
+                modelId: this.model.get('id')
+            }));
+            this.handleClick();
         },
         handleClick: function() {
             this.$el.trigger('closeDropdown.' + CustomElements.getNamespace());

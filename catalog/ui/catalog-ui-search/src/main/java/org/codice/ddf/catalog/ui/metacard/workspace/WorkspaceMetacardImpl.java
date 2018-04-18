@@ -31,7 +31,6 @@ public class WorkspaceMetacardImpl extends ShareableMetacardImpl {
 
   public WorkspaceMetacardImpl() {
     super(TYPE);
-    Set<String> setOfTags = new HashSet<>();
     setTags(Collections.singleton(WorkspaceAttributes.WORKSPACE_TAG));
   }
 

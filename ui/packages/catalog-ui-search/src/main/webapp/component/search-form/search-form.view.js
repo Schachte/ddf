@@ -81,7 +81,7 @@ module.exports = Marionette.LayoutView.extend({
                     this.options.queryModel.set('title', 'Search Name');
                 }
                 user.getQuerySettings().set('type', 'text');
-                break;
+                break;          
             case 'custom':
                 let sorts = this.model.get('querySettings') && this.model.get('querySettings').sorts;
                 if (sorts) {
@@ -104,7 +104,6 @@ module.exports = Marionette.LayoutView.extend({
                 user.getQuerySettings().set('type', 'custom');
                 break;
         }
-
         user.savePreferences();
         this.triggerCloseDropdown();
     },

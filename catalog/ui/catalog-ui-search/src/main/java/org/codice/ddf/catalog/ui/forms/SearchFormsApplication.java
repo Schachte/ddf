@@ -86,7 +86,10 @@ public class SearchFormsApplication implements SparkApplication {
   private static final Logger LOGGER = LoggerFactory.getLogger(SearchFormsApplication.class);
 
   public SearchFormsApplication(
-      CatalogFramework catalogFramework, TemplateTransformer transformer, EndpointUtil util) {
+      CatalogFramework catalogFramework,
+      TemplateTransformer transformer,
+      EndpointUtil util,
+      SubjectIdentity subjectIdentity) {
     this.catalogFramework = catalogFramework;
     this.transformer = transformer;
     this.util = util;

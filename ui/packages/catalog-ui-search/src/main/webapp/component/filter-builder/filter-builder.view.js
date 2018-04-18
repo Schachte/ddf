@@ -181,6 +181,9 @@
                     }
                 }.bind(this));
                 this.handleEditing();
+                // if (this.options.isForm === true && this.options.isFormBuilder !== true) {
+                //     this.filterContents.currentView.turnOnFilterInputEditing();
+                // }
             }
         }.bind(this),0);
     },
@@ -222,7 +225,16 @@
         this.$el.removeClass('is-editing');
         this.filterOperator.currentView.turnOffEditing();
         this.filterContents.currentView.turnOffEditing();
+        // if (this.options.isForm === true && this.options.isFormBuilder !== true) {
+        //     this.filterContents.currentView.turnOnFilterInputEditing();
+        // }
     },
+    // turnOnFilterInputEditing: function(){
+    //     this.filterContents.currentView.turnOnFilterInputEditing();
+    // },
+    // turnOffFilterInputEditing: function() {
+    //     this.filterContents.currentView.turnOffFilterInputEditing();
+    // },
     turnOffNesting: function(){
         this.$el.addClass('hide-nesting');
     },

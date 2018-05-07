@@ -12,28 +12,28 @@
  * <http://www.gnu.org/licenses/lgpl.html>.
  *
  **/
- /*global require*/
- const _ = require('underscore');
- const $ = require('jquery');
- const Backbone = require('backbone');
- const SearchForm = require('../search-form');
- const Common = require('js/Common');
- const user = require('component/singletons/user-instance');
+/*global require*/
+const _ = require('underscore');
+const $ = require('jquery');
+const Backbone = require('backbone');
+const SearchForm = require('../search-form');
+const Common = require('js/Common');
+const user = require('component/singletons/user-instance');
 
- let sharedTemplates = [];
- const templatePromise = $.ajax({
+let sharedTemplates = [];
+const templatePromise = $.ajax({
     type: 'GET',
     context: this,
     url: '/search/catalog/internal/forms/query',
     contentType: 'application/json',
-    success: function (data) {
+    success: function(data) {
         sharedTemplates = data;
-    }
+    },
 });
 
- module.exports = Backbone.AssociatedModel.extend({
-   model: SearchForm,
-   defaults: {
+module.exports = Backbone.AssociatedModel.extend({
+    model: SearchForm,
+    defaults: {
         doneLoading: false,
         sharedSearchForms: []
    },
@@ -73,30 +73,30 @@
                 });
                 this.doneLoading();
             }
-       });
-   },
-   checkIfShareable: function(template) {
-       if (this.checkIfInGroup(template) || this.checkIfInIndividiuals(template)) {
-           return true;
-       }
-       return false;
-   },
-   checkIfInGroup: function(template) {
-       let myGroups = user.get('user').get('roles');
-       let roleIntersection = myGroups.filter(function(n) {
-        return template.accessGroups.indexOf(n) !== -1;
-       });
+        });
+    },
+    checkIfShareable: function(template) {
+        return (
+            this.checkIfInGroup(template) ||
+            this.checkIfInIndividiuals(template)
+        );
+    },
+    checkIfInGroup: function(template) {
+        let myGroups = user.get('user').get('roles');
+        let roleIntersection = myGroups.filter(function(n) {
+            return template.accessGroups.indexOf(n) !== -1;
+        });
 
-       return !_.isEmpty(roleIntersection);
-   },
-   checkIfInIndividiuals: function(template) {
-       let myEmail = [user.get('user').get('email')];
-       let accessIndividualIntersection = myEmail.filter(function(n) {
-        return template.accessIndividuals.indexOf(n) !== -1;
-       });
+        return !_.isEmpty(roleIntersection);
+    },
+    checkIfInIndividiuals: function(template) {
+        let myEmail = [user.get('user').get('email')];
+        let accessIndividualIntersection = myEmail.filter(function(n) {
+            return template.accessIndividuals.indexOf(n) !== -1;
+        });
 
-       return !_.isEmpty(accessIndividualIntersection);
-   },
+        return !_.isEmpty(accessIndividualIntersection);
+    },
     addSearchForm: function(searchForm) {
         this.get('sharedSearchForms').add(searchForm);
     },
@@ -109,4 +109,4 @@
     getCollection: function() {
         return this.get('sharedSearchForms');
     },
- });
+});

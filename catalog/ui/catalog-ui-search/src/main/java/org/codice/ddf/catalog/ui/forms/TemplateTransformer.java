@@ -13,9 +13,13 @@
  */
 package org.codice.ddf.catalog.ui.forms;
 
+import static org.codice.ddf.catalog.ui.security.Constants.SYSTEM_TEMPLATE_ALIAS;
+
+import com.google.common.collect.ImmutableMap;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.data.impl.types.SecurityAttributes;
 import ddf.catalog.data.types.Core;
+import ddf.catalog.data.types.Security;
 import java.io.ByteArrayInputStream;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
@@ -190,11 +194,50 @@ public class TemplateTransformer {
   /** Convert an attribute group metacard into the JSON representation of FieldFilter. */
   @Nullable
   public FieldFilter toFieldFilter(Metacard metacard) {
+
     if (!AttributeGroupMetacard.isAttributeGroupMetacard(metacard)) {
       LOGGER.debug("Metacard {} was not a result template metacard", metacard);
       return null;
     }
+
+    String metacardOwner = retrieveOwnerIfPresent(metacard);
+    Map<String, List<Serializable>> securityAttributes = retrieveSecurityIfPresent(metacard);
+
     AttributeGroupMetacard wrapped = new AttributeGroupMetacard(metacard);
-    return new FieldFilter(wrapped, wrapped.getGroupDescriptors());
+    return new FieldFilter(
+        wrapped, wrapped.getGroupDescriptors(), metacardOwner, securityAttributes);
+  }
+
+  /** Retrieves original creator of metacard if present to determine if system template or not */
+  private static String retrieveOwnerIfPresent(Metacard inputMetacard) {
+
+    String metacardOwner = SYSTEM_TEMPLATE_ALIAS;
+
+    if (inputMetacard.getAttribute(Core.METACARD_OWNER) != null) {
+      metacardOwner = inputMetacard.getAttribute(Core.METACARD_OWNER).getValue().toString();
+    }
+
+    return metacardOwner;
+  }
+
+  /**
+   * Attaches relevant security attributes to metacard is present to be returned on the JSON
+   * response
+   */
+  private static Map<String, List<Serializable>> retrieveSecurityIfPresent(Metacard inputMetacard) {
+    List<Serializable> accessIndividuals = new ArrayList<>();
+    List<Serializable> accessGroups = new ArrayList<>();
+
+    if (inputMetacard.getAttribute(SecurityAttributes.ACCESS_INDIVIDUALS) != null) {
+      accessIndividuals.addAll(
+          inputMetacard.getAttribute(SecurityAttributes.ACCESS_INDIVIDUALS).getValues());
+    }
+
+    if (inputMetacard.getAttribute(SecurityAttributes.ACCESS_GROUPS) != null) {
+      accessGroups.addAll(inputMetacard.getAttribute(SecurityAttributes.ACCESS_GROUPS).getValues());
+    }
+
+    return ImmutableMap.of(
+        Security.ACCESS_INDIVIDUALS, accessIndividuals, Security.ACCESS_GROUPS, accessGroups);
   }
 }

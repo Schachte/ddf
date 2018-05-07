@@ -18,7 +18,7 @@ import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.apache.commons.lang.StringUtils.isEmpty;
-import static org.codice.ddf.catalog.ui.security.Constants.SYSTEM_TEMPLATE;
+import static org.codice.ddf.catalog.ui.security.Constants.SYSTEM_TEMPLATE_ALIAS;
 import static org.codice.ddf.catalog.ui.security.ShareableMetacardImpl.canShare;
 import static spark.Spark.after;
 import static spark.Spark.delete;
@@ -896,7 +896,7 @@ public class MetacardApplication implements SparkApplication {
         .getAttribute(Core.METACARD_OWNER)
         .getValue()
         .toString()
-        .contains(SYSTEM_TEMPLATE);
+        .contains(SYSTEM_TEMPLATE_ALIAS);
   }
 
   private void trySleep(long millis) {

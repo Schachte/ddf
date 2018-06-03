@@ -13,7 +13,7 @@
  */
 package org.codice.ddf.catalog.ui.forms;
 
-import static org.codice.ddf.catalog.ui.security.Constants.SYSTEM_TEMPLATE_ALIAS;
+import static org.codice.ddf.catalog.ui.security.Constants.SYSTEM_TEMPLATE;
 
 import com.google.common.collect.ImmutableMap;
 import ddf.catalog.data.Metacard;
@@ -24,7 +24,6 @@ import java.io.ByteArrayInputStream;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
@@ -211,7 +210,7 @@ public class TemplateTransformer {
   /** Retrieves original creator of metacard if present to determine if system template or not */
   private static String retrieveOwnerIfPresent(Metacard inputMetacard) {
 
-    String metacardOwner = SYSTEM_TEMPLATE_ALIAS;
+    String metacardOwner = SYSTEM_TEMPLATE;
 
     if (inputMetacard.getAttribute(Core.METACARD_OWNER) != null) {
       metacardOwner = inputMetacard.getAttribute(Core.METACARD_OWNER).getValue().toString();

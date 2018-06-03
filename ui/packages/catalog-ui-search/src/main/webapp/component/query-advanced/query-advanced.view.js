@@ -46,6 +46,7 @@ module.exports = Marionette.LayoutView.extend({
     },
     onBeforeShow: function(){
         this.model = this.model._cloneOf ? store.getQueryById(this.model._cloneOf) : this.model;
+        debugger
         this.querySettings.show(new QuerySettingsView({
             model: this.model,
             isForm: this.options.isForm || false,

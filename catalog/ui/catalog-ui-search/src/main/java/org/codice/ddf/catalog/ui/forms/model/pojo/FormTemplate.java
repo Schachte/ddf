@@ -14,7 +14,6 @@
 package org.codice.ddf.catalog.ui.forms.model.pojo;
 
 import ddf.catalog.data.Metacard;
-import ddf.catalog.data.types.Security;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +57,8 @@ public class FormTemplate extends CommonTemplate {
     this.root = root;
     this.creator = creator;
     this.querySettings = querySettings;
+    this.accessIndividuals = accessIndividuals;
+    this.accessGroups = accessGroups;
   }
 
   public FilterNode getRoot() {

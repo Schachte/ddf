@@ -1,9 +1,21 @@
+/**
+ * Copyright (c) Codice Foundation
+ *
+ * <p>This is free software: you can redistribute it and/or modify it under the terms of the GNU
+ * Lesser General Public License as published by the Free Software Foundation, either version 3 of
+ * the License, or any later version.
+ *
+ * <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details. A copy of the GNU Lesser General Public
+ * License is distributed along with this program and can be found at
+ * <http://www.gnu.org/licenses/lgpl.html>.
+ */
 package org.codice.ddf.catalog.ui.query.cql;
 
 import ddf.catalog.impl.filter.CustomFunctionImpl;
 import java.util.function.Predicate;
 import org.geotools.filter.IsEqualsToImpl;
-import org.geotools.filter.text.cql2.CQLException;
 import org.opengis.filter.Filter;
 
 /**
@@ -16,9 +28,12 @@ public class EcqlProxy {
           convertedFilter instanceof IsEqualsToImpl
               && ((IsEqualsToImpl) convertedFilter).getExpression1() instanceof CustomFunctionImpl;
 
-  public static Filter toProxyFilter(Filter convertedFilter) throws CQLException {
+  public static Filter toProxyFilter(Filter convertedFilter) {
     if (isCustomFilterFunction.test(convertedFilter)) {
-      return ((CustomFunctionImpl) convertedFilter).retrieveProxyFilter(convertedFilter);
+      Filter proxyFilter =
+          ((CustomFunctionImpl) ((IsEqualsToImpl) convertedFilter).getExpression1())
+              .retrieveProxyFilter(convertedFilter);
+      return proxyFilter != null ? proxyFilter : convertedFilter;
     }
     return convertedFilter;
   }

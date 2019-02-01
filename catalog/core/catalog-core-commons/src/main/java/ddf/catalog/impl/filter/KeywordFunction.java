@@ -17,12 +17,12 @@ import static org.apache.commons.lang3.Validate.isTrue;
 import static org.apache.commons.lang3.Validate.notNull;
 
 import java.util.List;
-import org.geotools.filter.FunctionImpl;
+import org.opengis.filter.Filter;
 import org.opengis.filter.capability.FunctionName;
 import org.opengis.filter.expression.Expression;
 import org.opengis.filter.expression.Literal;
 
-public class KeywordFunction extends FunctionImpl {
+public class KeywordFunction extends CustomFunctionImpl {
 
   public static final int NUM_PARAMETERS = 3;
 
@@ -46,5 +46,10 @@ public class KeywordFunction extends FunctionImpl {
     this.setParameters(parameters);
     this.setFallbackValue(fallback);
     this.functionName = FUNCTION_NAME;
+  }
+
+  // TODO: Implement this bad boy
+  public Filter retrieveProxyFilter() {
+    return null;
   }
 }

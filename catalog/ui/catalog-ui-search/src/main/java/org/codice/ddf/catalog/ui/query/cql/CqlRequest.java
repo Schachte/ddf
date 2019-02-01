@@ -1,9 +1,13 @@
 /**
  * Copyright (c) Codice Foundation
  *
+ * <p>
+ *
  * <p>This is free software: you can redistribute it and/or modify it under the terms of the GNU
  * Lesser General Public License as published by the Free Software Foundation, either version 3 of
  * the License, or any later version.
+ *
+ * <p>
  *
  * <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
@@ -270,7 +274,7 @@ public class CqlRequest {
   private Filter createFilter(FilterBuilder filterBuilder) {
     Filter filter = null;
     try {
-      filter = ECQL.toFilter(cql);
+      filter = EcqlProxy.toProxyFilter(ECQL.toFilter(cql));
     } catch (CQLException e) {
       halt(400, "Unable to parse CQL filter");
     }

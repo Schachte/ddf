@@ -17,12 +17,17 @@ import static org.apache.commons.lang3.Validate.isTrue;
 import static org.apache.commons.lang3.Validate.notNull;
 
 import java.util.List;
-import org.geotools.filter.FunctionImpl;
+import org.geotools.filter.FilterFactoryImpl;
+import org.opengis.filter.Filter;
+import org.opengis.filter.FilterFactory;
+import org.opengis.filter.PropertyIsEqualTo;
 import org.opengis.filter.capability.FunctionName;
 import org.opengis.filter.expression.Expression;
 import org.opengis.filter.expression.Literal;
 
-public class KeywordFunction extends FunctionImpl {
+public class KeywordFunction extends CustomFunctionImpl {
+
+  private static final FilterFactory FF = new FilterFactoryImpl();
 
   public static final int NUM_PARAMETERS = 3;
 
@@ -46,5 +51,16 @@ public class KeywordFunction extends FunctionImpl {
     this.setParameters(parameters);
     this.setFallbackValue(fallback);
     this.functionName = FUNCTION_NAME;
+  }
+
+  public Filter retrieveProxyFilter(Filter filter) {
+    if (filter instanceof PropertyIsEqualTo) {
+      return ((FilterFactoryImpl) FF)
+          .intersects(
+              this.getParameters().get(0),
+              this.getParameters().get(1),
+              ((PropertyIsEqualTo) filter).getMatchAction());
+    }
+    return filter;
   }
 }

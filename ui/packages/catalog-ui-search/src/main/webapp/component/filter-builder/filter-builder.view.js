@@ -40,28 +40,6 @@ const Root = styled.div`
     width: auto;
   }
 
-  > .filter-header {
-    white-space: nowrap;
-    margin-bottom: ${props => props.theme.minimumSpacing};
-  }
-
-  > .filter-header {
-    > .filter-operator {
-      margin-right: ${props => props.theme.minimumSpacing};
-    }
-
-    > .filter-operator {
-      display: inline-block;
-      vertical-align: top;
-      height: ${props => props.theme.minimumButtonSize};
-      line-height: ${props => props.theme.minimumButtonSize};
-      intrigue-dropdown.is-editing .dropdown-text {
-        width: auto;
-        max-width: 300px;
-      }
-    }
-  }
-
   & {
     margin: ${props => props.theme.minimumSpacing};
   }
@@ -157,12 +135,29 @@ const FilterContents = styled.div`
   } */
 `
 
+const FilterHeader = styled.div`
+  white-space: nowrap;
+  margin-bottom: ${props => props.theme.minimumSpacing};
+
+  > .filter-operator {
+    display: inline-block;
+    vertical-align: top;
+    height: ${props => props.theme.minimumButtonSize};
+    margin-right: ${props => props.theme.minimumSpacing};
+    line-height: ${props => props.theme.minimumButtonSize};
+    intrigue-dropdown.is-editing .dropdown-text {
+      width: auto;
+      max-width: 300px;
+    }
+  }
+`
+
 module.exports = Marionette.LayoutView.extend({
   template() {
     const { isSortable = false } = this.options
     return (
       <Root>
-        <div className="filter-header">
+        <FilterHeader>
           {isSortable ? (
             <FilterRearrange>
               <span className="cf cf-sort-grabber" />
@@ -198,7 +193,7 @@ module.exports = Marionette.LayoutView.extend({
               <span>Add Group</span>
             </AddGroup>
           </ContentsButtons>
-        </div>
+        </FilterHeader>
         <FilterContents className="global-bracket is-left">
           <div className="contents-filters" />
         </FilterContents>

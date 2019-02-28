@@ -28,6 +28,52 @@ var cql = require('../../js/cql.js')
 var DropdownView = require('../dropdown/dropdown.view.js')
 var CQLUtils = require('../../js/CQLUtils.js')
 
+function getFiltersAll(model) {
+  if (model !== undefined) {
+    console.log(model.toJSON())
+  }
+
+  if (model instanceof FilterBuilderModel) {
+    return getFilters(model)
+  }
+
+  if (model instanceof FilterModel) {
+    return FilterView.getFilters(model)
+  }
+}
+
+function getFilters(model) {
+  var operator = model.get('operator')
+  const filters = model.get('filters') || []
+
+  if (operator === 'NONE') {
+    return {
+      type: 'NOT',
+      filters: [
+        {
+          type: 'AND',
+          filters: filters.map(getFiltersAll),
+        },
+      ],
+    }
+  } else {
+    return {
+      type: operator,
+      filters: filters.map(getFiltersAll).filter(filter => filter),
+    }
+  }
+}
+
+const FilterBuilderCollection = Backbone.Collection.extend({
+  model(attrs) {
+    if (attrs.type === 'filter-builder') {
+      return new FilterBuilderModel(attrs)
+    }
+
+    return new FilterModel(FilterView.setFilter(attrs))
+  },
+})
+
 module.exports = Marionette.LayoutView.extend({
   template: template,
   tagName: CustomElements.register('filter-builder'),
@@ -47,6 +93,19 @@ module.exports = Marionette.LayoutView.extend({
     filterContents: '.contents-filters',
   },
   initialize: function() {
+    const filters = this.model.get('filters')
+    this.collection = new FilterBuilderCollection(
+      filters || [
+        new FilterModel({
+          sortableOrder: 1,
+          isResultFilter: Boolean(this.model.get('isResultFilter')),
+        }),
+      ],
+      {
+        comparator: 'sortableOrder',
+      }
+    )
+    this.model.set('filters', this.collection)
     this.listenTo(this.model, 'change:operator', this.updateOperatorDropdown)
     if (this.options.isForm === true) {
       if (this.options.isFormBuilder !== true) {
@@ -88,9 +147,7 @@ module.exports = Marionette.LayoutView.extend({
     )
     this.filterContents.show(
       new FilterCollectionView({
-        collection: new Backbone.Collection([this.createFilterModel()], {
-          comparator: 'sortableOrder',
-        }),
+        collection: this.collection,
         'filter-builder': this,
         isForm: this.options.isForm || false,
         isFormBuilder: this.options.isFormBuilder || false,
@@ -111,47 +168,38 @@ module.exports = Marionette.LayoutView.extend({
   delete: function() {
     this.model.destroy()
   },
-  addFilter: function() {
-    var FilterView = this.filterContents.currentView.addFilter(
-      this.createFilterModel()
-    )
+  addFilter: function(filter) {
+    const numFilters = this.collection.length
+
+    const filterModel = new FilterModel({
+      sortableOrder: numFilters + 1,
+      isResultFilter: Boolean(this.model.get('isResultFilter')),
+    })
+
+    if (filter !== undefined) {
+      filterModel.set(FilterView.setFilter(filter))
+    }
+
+    this.collection.push(filterModel)
     this.handleEditing()
-    return FilterView
   },
-  addFilterBuilder: function() {
-    const numFilters = this.filterContents.currentView
-      ? this.filterContents.currentView.collection.length
-      : 0
-    var FilterBuilderView = this.filterContents.currentView.addFilterBuilder(
-      new FilterBuilderModel({ sortableOrder: numFilters + 1 })
-    )
+  addFilterBuilder: function({ filters, type } = {}) {
+    const numFilters = this.collection.length
+    const filterBuilderModel = new FilterBuilderModel({
+      sortableOrder: numFilters + 1,
+      filters,
+    })
+
+    if (type !== undefined) {
+      filterBuilderModel.set('operator', type)
+    }
+
+    this.collection.push(filterBuilderModel)
     this.handleEditing()
-    return FilterBuilderView
   },
   filterView: FilterView,
   printValue: function() {
     alert(this.transformToCql())
-  },
-  getValue: function() {
-    var operator = this.model.get('operator')
-    var text = '('
-    this.filterContents.currentView.children.forEach(function(
-      childView,
-      index
-    ) {
-      if (index > 0) {
-        if (operator === 'NONE') {
-          text += ' AND NOT '
-        } else {
-          text += ' ' + operator + ' '
-        }
-      } else if (operator === 'NONE') {
-        text += ' NOT '
-      }
-      text += childView.getValue()
-    })
-    text += ')'
-    return text
   },
   transformToCql: function() {
     this.deleteInvalidFilters()
@@ -163,64 +211,31 @@ module.exports = Marionette.LayoutView.extend({
     }
   },
   getFilters: function() {
-    var operator = this.model.get('operator')
-    if (operator === 'NONE') {
-      return {
-        type: 'NOT',
-        filters: [
-          {
-            type: 'AND',
-            filters: this.filterContents.currentView.children.map(function(
-              childView
-            ) {
-              return childView.getFilters()
-            }),
-          },
-        ],
-      }
-    } else {
-      return {
-        type: operator,
-        filters: this.filterContents.currentView.children
-          .map(function(childView) {
-            return childView.getFilters()
-          })
-          .filter(function(filter) {
-            return filter
-          }),
-      }
-    }
+    return getFiltersAll(this.model)
   },
   deleteInvalidFilters: function() {
-    this.filterContents.currentView.children.forEach(function(childView) {
-      childView.deleteInvalidFilters()
+    const collection = this.collection.filter(function(model) {
+      return model.get('isValid') !== false
     })
-    if (this.filterContents.currentView.children.length === 0) {
+
+    this.collection.reset(collection, { silent: true })
+
+    if (collection.length === 0) {
       this.delete()
     }
   },
   setFilters: function(filters) {
-    setTimeout(
-      function() {
-        if (this.filterContents) {
-          this.filterContents.currentView.collection.reset()
-          filters.forEach(
-            function(filter) {
-              if (filter.filters) {
-                var filterBuilderView = this.addFilterBuilder()
-                filterBuilderView.setFilters(filter.filters)
-                filterBuilderView.model.set('operator', filter.type)
-              } else {
-                var filterView = this.addFilter()
-                filterView.setFilter(filter)
-              }
-            }.bind(this)
-          )
-          this.handleEditing()
+    this.collection.reset()
+    filters.forEach(
+      function(filter) {
+        if (filter.filters) {
+          this.addFilterBuilder(filter)
+        } else {
+          this.addFilter(filter)
         }
-      }.bind(this),
-      0
+      }.bind(this)
     )
+    this.handleEditing()
   },
   revert: function() {
     this.$el.removeClass('is-editing')
@@ -249,7 +264,7 @@ module.exports = Marionette.LayoutView.extend({
     }
   },
   sortCollection: function() {
-    this.filterContents.currentView.collection.sort()
+    this.collection.sort()
   },
   turnOnEditing: function() {
     this.$el.addClass('is-editing')
@@ -269,14 +284,5 @@ module.exports = Marionette.LayoutView.extend({
   },
   turnOffFieldAdditions: function() {
     this.$el.addClass('hide-field-button')
-  },
-  createFilterModel: function() {
-    const numFilters = this.filterContents.currentView
-      ? this.filterContents.currentView.collection.length
-      : 0
-    return new FilterModel({
-      sortableOrder: numFilters + 1,
-      isResultFilter: Boolean(this.model.get('isResultFilter')),
-    })
   },
 })

@@ -81,6 +81,120 @@ const determineView = comparator => {
   return necessaryView
 }
 
+function setFilterFromFilterFunction(filter) {
+  if (filter.filterFunctionName === 'proximity') {
+    var property = filter.params[0]
+    var distance = filter.params[1]
+    var value = filter.params[2]
+
+    return {
+      value: [
+        {
+          value: value,
+          distance: distance,
+        },
+      ],
+      // this is confusing but 'type' on the model is actually the name of the property we're filtering on
+      type: property,
+      comparator: 'NEAR',
+    }
+  } else {
+    throw new Error(
+      'Unsupported filter function in filter view: ' + filterFunctionName
+    )
+  }
+}
+
+function comparatorToCQL() {
+  return {
+    BEFORE: 'BEFORE',
+    AFTER: 'AFTER',
+    RELATIVE: '=',
+    BETWEEN: 'DURING',
+    INTERSECTS: 'INTERSECTS',
+    CONTAINS: 'ILIKE',
+    MATCHCASE: 'LIKE',
+    EQUALS: '=',
+    '>': '>',
+    '<': '<',
+    '=': '=',
+    '<=': '<=',
+    '>=': '>=',
+  }
+}
+
+function CQLtoComparator() {
+  var comparator = {}
+  for (var key in comparatorToCQL()) {
+    comparator[comparatorToCQL()[key]] = key
+  }
+  return comparator
+}
+
+function getComparatorForFilter(filter) {
+  const propertyDefinition = metacardDefinitions.metacardTypes[filter.property]
+  if (
+    propertyDefinition &&
+    propertyDefinition.type === 'DATE' &&
+    filter.type === '='
+  ) {
+    return 'RELATIVE'
+  } else {
+    return CQLtoComparator()[filter.type]
+  }
+}
+
+function setFilter(filter) {
+  if (CQLUtils.isGeoFilter(filter.type)) {
+    filter.value = _.clone(filter)
+  }
+  if (_.isObject(filter.property)) {
+    // if the filter is something like NEAR (which maps to a CQL filter function such as 'proximity'),
+    // there is an enclosing filter that creates the necessary '= TRUE' predicate, and the 'property'
+    // attribute is what actually contains that proximity() call.
+    setFilterFromFilterFunction(filter.property)
+  } else {
+    let value = [filter.value]
+    if (filter.type === 'DURING') {
+      value = [`${filter.from}/${filter.to}`]
+    }
+    return {
+      value,
+      type: filter.property,
+      comparator: getComparatorForFilter(filter),
+    }
+  }
+}
+
+function getFilters(model) {
+  var property = model.get('type')
+  var comparator = model.get('comparator')
+  var value = model.get('value')[0]
+
+  if (comparator === 'NEAR') {
+    return CQLUtils.generateFilterForFilterFunction('proximity', [
+      property,
+      value.distance,
+      value.value,
+    ])
+  }
+
+  var type = comparatorToCQL()[comparator]
+  if (metacardDefinitions.metacardTypes[model.get('type')].multivalued) {
+    return {
+      type: 'AND',
+      filters: model
+        .get('value')
+        .getValue()
+        .map(function(currentValue) {
+          return CQLUtils.generateFilter(type, property, currentValue)
+        }),
+    }
+  } else {
+    return CQLUtils.generateFilter(type, property, value)
+  }
+}
+
 module.exports = Marionette.LayoutView.extend({
   template: template,
   tagName: CustomElements.register('filter'),
@@ -166,44 +280,7 @@ module.exports = Marionette.LayoutView.extend({
     }
     return value
   },
-  comparatorToCQL: function() {
-    return {
-      BEFORE: 'BEFORE',
-      AFTER: 'AFTER',
-      RELATIVE: '=',
-      BETWEEN: 'DURING',
-      INTERSECTS: 'INTERSECTS',
-      CONTAINS: 'ILIKE',
-      MATCHCASE: 'LIKE',
-      EQUALS: '=',
-      '>': '>',
-      '<': '<',
-      '=': '=',
-      '<=': '<=',
-      '>=': '>=',
-    }
-  },
-  CQLtoComparator: function() {
-    var comparator = {}
-    for (var key in this.comparatorToCQL()) {
-      comparator[this.comparatorToCQL()[key]] = key
-    }
-    return comparator
-  },
   // With the relative date comparator being the same as =, we need to try and differentiate them this way
-  getComparatorForFilter(filter) {
-    const propertyDefinition =
-      metacardDefinitions.metacardTypes[filter.property]
-    if (
-      propertyDefinition &&
-      propertyDefinition.type === 'DATE' &&
-      filter.type === '='
-    ) {
-      return 'RELATIVE'
-    } else {
-      return this.CQLtoComparator()[filter.type]
-    }
-  },
   updateTypeDropdown: function() {
     this.filterAttribute.currentView.model.set('value', [
       this.model.get('type'),
@@ -270,14 +347,12 @@ module.exports = Marionette.LayoutView.extend({
     }
   },
   updateValueFromInput: function() {
-    if (
-      this.filterInput.currentView &&
-      this.filterInput.currentView.model.hasChanged()
-    ) {
-      this.model.set(
-        'value',
-        Common.duplicate(this.filterInput.currentView.model.getValue())
+    if (this.filterInput.currentView) {
+      const value = Common.duplicate(
+        this.filterInput.currentView.model.getValue()
       )
+      const isValid = this.filterInput.currentView.isValid()
+      this.model.set({ value, isValid }, { silent: true })
     }
   },
   determineInput: function() {
@@ -291,14 +366,16 @@ module.exports = Marionette.LayoutView.extend({
       currentComparator
     )
     const ViewToUse = determineView(currentComparator)
+    const model = new PropertyModel(propertyJSON)
+    this.listenTo(model, 'change:value', this.updateValueFromInput)
     this.filterInput.show(
       new ViewToUse({
-        model: new PropertyModel(propertyJSON),
+        model: model,
       })
     )
 
     var isEditing = this.$el.hasClass('is-editing')
-    if (isEditing) {
+    if (isEditing || this.options.editing) {
       this.turnOnEditing()
     } else {
       this.turnOffEditing()
@@ -308,68 +385,13 @@ module.exports = Marionette.LayoutView.extend({
   getValue: function() {
     var text = '('
     text += this.model.get('type') + ' '
-    text += this.comparatorToCQL()[this.model.get('comparator')] + ' '
+    text += comparatorToCQL()[this.model.get('comparator')] + ' '
     text += this.filterInput.currentView.model.getValue()
     text += ')'
     return text
   },
   getFilters: function() {
-    var property = this.model.get('type')
-    var comparator = this.model.get('comparator')
-    var value = this.filterInput.currentView.model.getValue()[0]
-
-    if (comparator === 'NEAR') {
-      return CQLUtils.generateFilterForFilterFunction('proximity', [
-        property,
-        value.distance,
-        value.value,
-      ])
-    }
-
-    var type = this.comparatorToCQL()[comparator]
-    if (metacardDefinitions.metacardTypes[this.model.get('type')].multivalued) {
-      return {
-        type: 'AND',
-        filters: this.filterInput.currentView.model
-          .getValue()
-          .map(function(currentValue) {
-            return CQLUtils.generateFilter(type, property, currentValue)
-          }),
-      }
-    } else {
-      return CQLUtils.generateFilter(type, property, value)
-    }
-  },
-  deleteInvalidFilters: function() {
-    if (!this.filterInput.currentView.isValid()) {
-      this.delete()
-    }
-  },
-  setFilter: function(filter) {
-    setTimeout(
-      function() {
-        if (CQLUtils.isGeoFilter(filter.type)) {
-          filter.value = _.clone(filter)
-        }
-        if (_.isObject(filter.property)) {
-          // if the filter is something like NEAR (which maps to a CQL filter function such as 'proximity'),
-          // there is an enclosing filter that creates the necessary '= TRUE' predicate, and the 'property'
-          // attribute is what actually contains that proximity() call.
-          this.setFilterFromFilterFunction(filter.property)
-        } else {
-          let value = [filter.value]
-          if (filter.type === 'DURING') {
-            value = [`${filter.from}/${filter.to}`]
-          }
-          this.model.set({
-            value,
-            type: filter.property,
-            comparator: this.getComparatorForFilter(filter),
-          })
-        }
-      }.bind(this),
-      0
-    )
+    return getFilters(this.model)
   },
   setFilterFromFilterFunction(filter) {
     if (filter.filterFunctionName === 'proximity') {
@@ -423,3 +445,6 @@ module.exports = Marionette.LayoutView.extend({
     )
   },
 })
+
+module.exports.setFilter = setFilter
+module.exports.getFilters = getFilters

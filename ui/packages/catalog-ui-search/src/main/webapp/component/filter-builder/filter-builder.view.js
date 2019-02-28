@@ -40,43 +40,14 @@ const Root = styled.div`
     width: auto;
   }
 
-  > .filter-header > .contents-buttons .add-filterBuilder {
-    position: relative;
-    padding-right: ${props => props.theme.minimumSpacing};
-  }
-
-  > .filter-header > .contents-buttons .add-filterBuilder span:nth-of-type(2) {
-    margin-right: ${props => props.theme.minimumSpacing};
-  }
-
-  > .filter-header
-    > .contents-buttons
-    .add-filterBuilder
-    span:nth-of-type(2)::after {
-    content: '';
-    position: absolute;
-    right: 0px;
-    border-left: 1px solid;
-    border-top: 1px solid;
-    border-bottom: 1px solid;
-    height: 100%;
-    width: ${props => props.theme.minimumSpacing};
-  }
-
   > .filter-header {
     white-space: nowrap;
     margin-bottom: ${props => props.theme.minimumSpacing};
   }
 
   > .filter-header {
-    > .filter-remove,
     > .filter-operator {
       margin-right: ${props => props.theme.minimumSpacing};
-    }
-
-    > .filter-remove {
-      display: none;
-      vertical-align: top;
     }
 
     > .filter-operator {
@@ -88,19 +59,6 @@ const Root = styled.div`
         width: auto;
         max-width: 300px;
       }
-    }
-
-    > .contents-buttons > button {
-      padding: 0px ${props => props.theme.minimumSpacing};
-    }
-
-    > .contents-buttons {
-      display: inline-block;
-    }
-
-    > .filter-remove {
-      width: ${props => props.theme.minimumButtonSize};
-      height: ${props => props.theme.minimumButtonSize};
     }
   }
 
@@ -118,27 +76,12 @@ const Root = styled.div`
     padding-left: ${props => props.theme.minimumSpacing};
   }
 
-  .contents-buttons {
-    margin-left: ${props => props.theme.minimumSpacing};
-
-    .add-filter {
-      margin-right: ${props => props.theme.minimumSpacing};
-    }
-  }
-
   .filter-header:hover + .filter-contents {
     /*.dropshadowlight;*/
   }
 
   & {
     margin: ${props => props.theme.minimumSpacing};
-  }
-
-  &.is-editing {
-    > .filter-header > .contents-buttons {
-      display: inline-block;
-      vertical-align: top;
-    }
   }
 
   /*&.hide-field-button {
@@ -158,25 +101,57 @@ const Root = styled.div`
       display: none;
     }
   }*/
-
-  intrigue-filter-collection {
-    > &.is-editing {
-      > .filter-header > .filter-remove {
-        display: inline-block;
-      }
-    }
-  }
 `
 
 const FilterRearrange = styled.button`
   /* .grab-cursor(); */
   display: inline-block;
-  width: 0.75 * ${props => props.theme.minimumButtonSize};
+  width: calc(0.75 * ${props => props.theme.minimumButtonSize});
   opacity: 0.25;
 
   :hover {
     opacity: 0.5;
     transition: opacity 0.5s ease-in-out;
+  }
+`
+const FilterRemove = styled.button`
+  vertical-align: top;
+  display: inline-block;
+  margin-right: ${props => props.theme.minimumSpacing};
+  width: ${props => props.theme.minimumButtonSize};
+  height: ${props => props.theme.minimumButtonSize};
+`
+
+const ContentsButtons = styled.div`
+  display: inline-block;
+  .add-filterBuilder {
+    position: relative;
+    padding-right: ${props => props.theme.minimumSpacing};
+  }
+
+  .add-filterBuilder span:nth-of-type(2) {
+    margin-right: ${props => props.theme.minimumSpacing};
+  }
+
+  .add-filterBuilder span:nth-of-type(2)::after {
+    content: '';
+    position: absolute;
+    right: 0px;
+    border-left: 1px solid;
+    border-top: 1px solid;
+    border-bottom: 1px solid;
+    height: 100%;
+    width: ${props => props.theme.minimumSpacing};
+  }
+
+  > button {
+    padding: 0px ${props => props.theme.minimumSpacing};
+  }
+
+  margin-left: ${props => props.theme.minimumSpacing};
+
+  .add-filter {
+    margin-right: ${props => props.theme.minimumSpacing};
   }
 `
 
@@ -191,17 +166,19 @@ module.exports = Marionette.LayoutView.extend({
               <span className="cf cf-sort-grabber" />
             </FilterRearrange>
           ) : null}
-          <button
-            className="filter-remove is-negative"
-            onClick={() => this.delete()}
-            data-help="Removes this branch."
-          >
-            <span className="fa fa-minus" />
-          </button>
+          {isSortable ? (
+            <FilterRemove
+              className="is-negative"
+              onClick={() => this.delete()}
+              data-help="Removes this branch."
+            >
+              <span className="fa fa-minus" />
+            </FilterRemove>
+          ) : null}
 
           <div className="filter-operator" />
 
-          <div className="contents-buttons">
+          <ContentsButtons>
             <button
               className="add-filter is-button is-neutral"
               onClick={() => this.addFilter()}
@@ -218,7 +195,7 @@ module.exports = Marionette.LayoutView.extend({
               <span className="fa fa-plus" />
               <span>Add Group</span>
             </button>
-          </div>
+          </ContentsButtons>
         </div>
         <div className="filter-contents global-bracket is-left">
           <div className="contents-filters" />

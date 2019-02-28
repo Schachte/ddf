@@ -62,24 +62,6 @@ const Root = styled.div`
     }
   }
 
-  > .filter-contents {
-    margin-right: ${props => props.theme.minimumSpacing};
-    position: relative;
-  }
-
-  > .filter-contents {
-    display: inline-block;
-    vertical-align: middle;
-  }
-
-  > .filter-contents > .contents-filters {
-    padding-left: ${props => props.theme.minimumSpacing};
-  }
-
-  .filter-header:hover + .filter-contents {
-    /*.dropshadowlight;*/
-  }
-
   & {
     margin: ${props => props.theme.minimumSpacing};
   }
@@ -124,16 +106,27 @@ const FilterRemove = styled.button`
 
 const ContentsButtons = styled.div`
   display: inline-block;
-  .add-filterBuilder {
-    position: relative;
-    padding-right: ${props => props.theme.minimumSpacing};
+
+  > button {
+    padding: 0px ${props => props.theme.minimumSpacing};
   }
 
-  .add-filterBuilder span:nth-of-type(2) {
+  margin-left: ${props => props.theme.minimumSpacing};
+`
+
+const AddFilter = styled.button`
+  margin-right: ${props => props.theme.minimumSpacing};
+`
+
+const AddGroup = styled.button`
+  position: relative;
+  padding-right: ${props => props.theme.minimumSpacing};
+
+  span:nth-of-type(2) {
     margin-right: ${props => props.theme.minimumSpacing};
   }
 
-  .add-filterBuilder span:nth-of-type(2)::after {
+  span:nth-of-type(2)::after {
     content: '';
     position: absolute;
     right: 0px;
@@ -143,16 +136,25 @@ const ContentsButtons = styled.div`
     height: 100%;
     width: ${props => props.theme.minimumSpacing};
   }
+`
 
-  > button {
-    padding: 0px ${props => props.theme.minimumSpacing};
+const Icon = styled.span`
+  margin-right: ${props => props.theme.minimumSpacing};
+`
+
+const FilterContents = styled.div`
+  margin-right: ${props => props.theme.minimumSpacing};
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+
+  > .contents-filters {
+    padding-left: ${props => props.theme.minimumSpacing};
   }
 
-  margin-left: ${props => props.theme.minimumSpacing};
-
-  .add-filter {
-    margin-right: ${props => props.theme.minimumSpacing};
-  }
+  /* .filter-header:hover + .filter-contents {
+    .dropshadowlight;
+  } */
 `
 
 module.exports = Marionette.LayoutView.extend({
@@ -179,27 +181,27 @@ module.exports = Marionette.LayoutView.extend({
           <div className="filter-operator" />
 
           <ContentsButtons>
-            <button
-              className="add-filter is-button is-neutral"
+            <AddFilter
+              className="is-button is-neutral"
               onClick={() => this.addFilter()}
               data-help="Adds a new rule at this current level of the tree"
             >
-              <span className="fa fa-plus" />
+              <Icon className="fa fa-plus" />
               <span>Add Field</span>
-            </button>
-            <button
-              className="add-filterBuilder is-button is-neutral"
+            </AddFilter>
+            <AddGroup
+              className="is-button is-neutral"
               onClick={() => this.addFilterBuilder()}
               data-help="Adds a new group at this current level of the tree."
             >
-              <span className="fa fa-plus" />
+              <Icon className="fa fa-plus" />
               <span>Add Group</span>
-            </button>
+            </AddGroup>
           </ContentsButtons>
         </div>
-        <div className="filter-contents global-bracket is-left">
+        <FilterContents className="global-bracket is-left">
           <div className="contents-filters" />
-        </div>
+        </FilterContents>
       </Root>
     )
   },

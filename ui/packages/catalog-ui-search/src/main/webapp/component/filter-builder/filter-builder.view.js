@@ -74,10 +74,6 @@ const Root = styled.div`
       margin-right: ${props => props.theme.minimumSpacing};
     }
 
-    > .filter-rearrange {
-      display: none;
-    }
-
     > .filter-remove {
       display: none;
       vertical-align: top;
@@ -145,22 +141,6 @@ const Root = styled.div`
     }
   }
 
-  &.is-sortable {
-    > .filter-header {
-      > .filter-rearrange {
-        /* .grab-cursor(); */
-        display: inline-block;
-        width: 0.75 * ${props => props.theme.minimumButtonSize};
-        opacity: 0.25;
-      }
-
-      > .filter-rearrange:hover {
-        opacity: 0.5;
-        transition: opacity 0.5s ease-in-out;
-      }
-    }
-  }
-
   /*&.hide-field-button {
     > .filter-header > .contents-buttons > .add-filter {
       display: none;
@@ -188,24 +168,43 @@ const Root = styled.div`
   }
 `
 
+const FilterRearrange = styled.button`
+  /* .grab-cursor(); */
+  display: inline-block;
+  width: 0.75 * ${props => props.theme.minimumButtonSize};
+  opacity: 0.25;
+
+  :hover {
+    opacity: 0.5;
+    transition: opacity 0.5s ease-in-out;
+  }
+`
+
 module.exports = Marionette.LayoutView.extend({
   template() {
+    const { isSortable = false } = this.options
     return (
       <Root>
         <div className="filter-header">
-          <button className="filter-rearrange">
-            <span className="cf cf-sort-grabber" />
-          </button>
+          {isSortable ? (
+            <FilterRearrange>
+              <span className="cf cf-sort-grabber" />
+            </FilterRearrange>
+          ) : null}
           <button
             className="filter-remove is-negative"
+            onClick={() => this.delete()}
             data-help="Removes this branch."
           >
             <span className="fa fa-minus" />
           </button>
+
           <div className="filter-operator" />
+
           <div className="contents-buttons">
             <button
               className="add-filter is-button is-neutral"
+              onClick={() => this.addFilter()}
               data-help="Adds a new rule at this current level of the tree"
             >
               <span className="fa fa-plus" />
@@ -213,6 +212,7 @@ module.exports = Marionette.LayoutView.extend({
             </button>
             <button
               className="add-filterBuilder is-button is-neutral"
+              onClick={() => this.addFilterBuilder()}
               data-help="Adds a new group at this current level of the tree."
             >
               <span className="fa fa-plus" />
@@ -230,14 +230,6 @@ module.exports = Marionette.LayoutView.extend({
   attributes: function() {
     return { 'data-id': this.model.cid }
   },
-  events: {
-    'click > div > .filter-header > .contents-buttons .getValue': 'printValue',
-    'click > div > .filter-header > .filter-remove': 'delete',
-    'click > div > .filter-header > .contents-buttons .add-filter': 'addFilter',
-    'click > div > .filter-header > .contents-buttons .add-filterBuilder':
-      'addFilterBuilder',
-  },
-  modelEvents: {},
   regions: {
     filterOperator: '.filter-operator',
     filterContents: '.contents-filters',

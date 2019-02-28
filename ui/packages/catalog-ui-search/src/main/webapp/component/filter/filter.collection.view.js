@@ -12,8 +12,11 @@
  * <http://www.gnu.org/licenses/lgpl.html>.
  *
  **/
-/*global define, alert*/
+import React from 'react'
+import MarionetteRegionContainer from '../../react-component/container/marionette-region-container'
+
 const Marionette = require('marionette')
+const Backbone = require('backbone')
 const _ = require('underscore')
 const $ = require('jquery')
 const CustomElements = require('../../js/CustomElements.js')
@@ -21,7 +24,26 @@ const FilterModel = require('./filter')
 const FilterBuilderModel = require('../filter-builder/filter-builder.js')
 const Sortable = require('sortablejs')
 
-module.exports = Marionette.CollectionView.extend({
+module.exports = Marionette.ItemView.extend({
+  template() {
+    this.onBeforeRenderCollection()
+    return (
+      <React.Fragment>
+        {this.collection.map(model => {
+          const view = this.getChildView(model)
+          return (
+            <MarionetteRegionContainer
+              view={view}
+              viewOptions={{
+                model,
+                ...this.childViewOptions(),
+              }}
+            />
+          )
+        })}
+      </React.Fragment>
+    )
+  },
   getChildView: function(item) {
     switch (item.type) {
       case 'filter':
@@ -61,6 +83,7 @@ module.exports = Marionette.CollectionView.extend({
     }
   },
   initialize: function() {
+    this.children = new Backbone.Collection()
     this.listenTo(this.collection, 'remove', this.handleMinusButton)
     this.listenTo(this.collection, 'add', this.handleMinusButton)
     this.handleMinusButton()

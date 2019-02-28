@@ -12,12 +12,13 @@
  * <http://www.gnu.org/licenses/lgpl.html>.
  *
  **/
-/*global define, alert, setTimeout*/
+import React from 'react'
+import styled from '../../react-component/styles/styled-components'
+
 var Marionette = require('marionette')
 var Backbone = require('backbone')
 var $ = require('jquery')
 var _ = require('underscore')
-var template = require('./filter-builder.hbs')
 var CustomElements = require('../../js/CustomElements.js')
 var FilterBuilderModel = require('./filter-builder')
 var FilterModel = require('../filter/filter.js')
@@ -28,17 +29,212 @@ var cql = require('../../js/cql.js')
 var DropdownView = require('../dropdown/dropdown.view.js')
 var CQLUtils = require('../../js/CQLUtils.js')
 
+const Root = styled.div`
+  display: table;
+  width: 100%;
+  position: relative;
+
+  white-space: nowrap;
+
+  intrigue-dropdown.is-simpleDropdown.is-editing {
+    width: auto;
+  }
+
+  > .filter-header > .contents-buttons .add-filterBuilder {
+    position: relative;
+    padding-right: ${props => props.theme.minimumSpacing};
+  }
+
+  > .filter-header > .contents-buttons .add-filterBuilder span:nth-of-type(2) {
+    margin-right: ${props => props.theme.minimumSpacing};
+  }
+
+  > .filter-header
+    > .contents-buttons
+    .add-filterBuilder
+    span:nth-of-type(2)::after {
+    content: '';
+    position: absolute;
+    right: 0px;
+    border-left: 1px solid;
+    border-top: 1px solid;
+    border-bottom: 1px solid;
+    height: 100%;
+    width: ${props => props.theme.minimumSpacing};
+  }
+
+  > .filter-header {
+    white-space: nowrap;
+    margin-bottom: ${props => props.theme.minimumSpacing};
+  }
+
+  > .filter-header {
+    > .filter-remove,
+    > .filter-operator {
+      margin-right: ${props => props.theme.minimumSpacing};
+    }
+
+    > .filter-rearrange {
+      display: none;
+    }
+
+    > .filter-remove {
+      display: none;
+      vertical-align: top;
+    }
+
+    > .filter-operator {
+      display: inline-block;
+      vertical-align: top;
+      height: ${props => props.theme.minimumButtonSize};
+      line-height: ${props => props.theme.minimumButtonSize};
+      intrigue-dropdown.is-editing .dropdown-text {
+        width: auto;
+        max-width: 300px;
+      }
+    }
+
+    > .contents-buttons > button {
+      padding: 0px ${props => props.theme.minimumSpacing};
+    }
+
+    > .contents-buttons {
+      display: inline-block;
+    }
+
+    > .filter-remove {
+      width: ${props => props.theme.minimumButtonSize};
+      height: ${props => props.theme.minimumButtonSize};
+    }
+  }
+
+  > .filter-contents {
+    margin-right: ${props => props.theme.minimumSpacing};
+    position: relative;
+  }
+
+  > .filter-contents {
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  > .filter-contents > .contents-filters {
+    padding-left: ${props => props.theme.minimumSpacing};
+  }
+
+  .contents-buttons {
+    margin-left: ${props => props.theme.minimumSpacing};
+
+    .add-filter {
+      margin-right: ${props => props.theme.minimumSpacing};
+    }
+  }
+
+  .filter-header:hover + .filter-contents {
+    /*.dropshadowlight;*/
+  }
+
+  & {
+    margin: ${props => props.theme.minimumSpacing};
+  }
+
+  &.is-editing {
+    > .filter-header > .contents-buttons {
+      display: inline-block;
+      vertical-align: top;
+    }
+  }
+
+  &.is-sortable {
+    > .filter-header {
+      > .filter-rearrange {
+        /* .grab-cursor(); */
+        display: inline-block;
+        width: 0.75 * ${props => props.theme.minimumButtonSize};
+        opacity: 0.25;
+      }
+
+      > .filter-rearrange:hover {
+        opacity: 0.5;
+        transition: opacity 0.5s ease-in-out;
+      }
+    }
+  }
+
+  /*&.hide-field-button {
+    > .filter-header > .contents-buttons > .add-filter {
+      display: none;
+    }
+  }
+
+  &.hide-nesting {
+    > .filter-header > .contents-buttons > .add-filterBuilder {
+      display: none;
+    }
+  }
+
+  &.hide-root-operator {
+    > .filter-header > .filter-operator {
+      display: none;
+    }
+  }*/
+
+  intrigue-filter-collection {
+    > &.is-editing {
+      > .filter-header > .filter-remove {
+        display: inline-block;
+      }
+    }
+  }
+`
+
 module.exports = Marionette.LayoutView.extend({
-  template: template,
+  template() {
+    return (
+      <Root>
+        <div className="filter-header">
+          <button className="filter-rearrange">
+            <span className="cf cf-sort-grabber" />
+          </button>
+          <button
+            className="filter-remove is-negative"
+            data-help="Removes this branch."
+          >
+            <span className="fa fa-minus" />
+          </button>
+          <div className="filter-operator" />
+          <div className="contents-buttons">
+            <button
+              className="add-filter is-button is-neutral"
+              data-help="Adds a new rule at this current level of the tree"
+            >
+              <span className="fa fa-plus" />
+              <span>Add Field</span>
+            </button>
+            <button
+              className="add-filterBuilder is-button is-neutral"
+              data-help="Adds a new group at this current level of the tree."
+            >
+              <span className="fa fa-plus" />
+              <span>Add Group</span>
+            </button>
+          </div>
+        </div>
+        <div className="filter-contents global-bracket is-left">
+          <div className="contents-filters" />
+        </div>
+      </Root>
+    )
+  },
   tagName: CustomElements.register('filter-builder'),
   attributes: function() {
     return { 'data-id': this.model.cid }
   },
   events: {
-    'click > .filter-header > .contents-buttons .getValue': 'printValue',
-    'click > .filter-header > .filter-remove': 'delete',
-    'click > .filter-header > .contents-buttons .add-filter': 'addFilter',
-    'click > .filter-header > .contents-buttons .add-filterBuilder':
+    'click > div > .filter-header > .contents-buttons .getValue': 'printValue',
+    'click > div > .filter-header > .filter-remove': 'delete',
+    'click > div > .filter-header > .contents-buttons .add-filter': 'addFilter',
+    'click > div > .filter-header > .contents-buttons .add-filterBuilder':
       'addFilterBuilder',
   },
   modelEvents: {},

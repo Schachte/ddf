@@ -14,6 +14,7 @@
  **/
 import React from 'react'
 import styled from '../../react-component/styles/styled-components'
+import MarionetteRegionContainer from '../../react-component/container/marionette-region-container'
 
 var Marionette = require('marionette')
 var Backbone = require('backbone')
@@ -61,6 +62,23 @@ const Root = styled.div`
       display: none;
     }
   }*/
+`
+
+const FilterHeader = styled.div`
+  white-space: nowrap;
+  margin-bottom: ${props => props.theme.minimumSpacing};
+`
+
+const FilterOperator = styled.div`
+  display: inline-block;
+  vertical-align: top;
+  height: ${props => props.theme.minimumButtonSize};
+  margin-right: ${props => props.theme.minimumSpacing};
+  line-height: ${props => props.theme.minimumButtonSize};
+  intrigue-dropdown.is-editing .dropdown-text {
+    width: auto;
+    max-width: 300px;
+  }
 `
 
 const FilterRearrange = styled.button`
@@ -135,26 +153,34 @@ const FilterContents = styled.div`
   } */
 `
 
-const FilterHeader = styled.div`
-  white-space: nowrap;
-  margin-bottom: ${props => props.theme.minimumSpacing};
-
-  > .filter-operator {
-    display: inline-block;
-    vertical-align: top;
-    height: ${props => props.theme.minimumButtonSize};
-    margin-right: ${props => props.theme.minimumSpacing};
-    line-height: ${props => props.theme.minimumButtonSize};
-    intrigue-dropdown.is-editing .dropdown-text {
-      width: auto;
-      max-width: 300px;
-    }
-  }
-`
-
 module.exports = Marionette.LayoutView.extend({
   template() {
     const { isSortable = false } = this.options
+
+    this.operator = DropdownView.createSimpleDropdown({
+      list: [
+        {
+          label: 'AND',
+          value: 'AND',
+        },
+        {
+          label: 'OR',
+          value: 'OR',
+        },
+        {
+          label: 'NOT AND',
+          value: 'NOT AND',
+        },
+        {
+          label: 'NOT OR',
+          value: 'NOT OR',
+        },
+      ],
+      defaultSelection: ['AND'],
+    })
+
+    this.listenTo(this.operator, 'change:value', this.handleOperatorUpdate)
+
     return (
       <Root>
         <FilterHeader>
@@ -173,7 +199,9 @@ module.exports = Marionette.LayoutView.extend({
             </FilterRemove>
           ) : null}
 
-          <div className="filter-operator" />
+          <FilterOperator>
+            <MarionetteRegionContainer view={this.operator} />
+          </FilterOperator>
 
           <ContentsButtons>
             <AddFilter
@@ -205,7 +233,6 @@ module.exports = Marionette.LayoutView.extend({
     return { 'data-id': this.model.cid }
   },
   regions: {
-    filterOperator: '.filter-operator',
     filterContents: '.contents-filters',
   },
   initialize: function() {
@@ -219,35 +246,6 @@ module.exports = Marionette.LayoutView.extend({
     }
   },
   onBeforeShow: function() {
-    this.$el.toggleClass('is-sortable', this.options.isSortable || false)
-    this.filterOperator.show(
-      DropdownView.createSimpleDropdown({
-        list: [
-          {
-            label: 'AND',
-            value: 'AND',
-          },
-          {
-            label: 'OR',
-            value: 'OR',
-          },
-          {
-            label: 'NOT AND',
-            value: 'NOT AND',
-          },
-          {
-            label: 'NOT OR',
-            value: 'NOT OR',
-          },
-        ],
-        defaultSelection: ['AND'],
-      })
-    )
-    this.listenTo(
-      this.filterOperator.currentView.model,
-      'change:value',
-      this.handleOperatorUpdate
-    )
     this.filterContents.show(
       new FilterCollectionView({
         collection: new Backbone.Collection([this.createFilterModel()], {
@@ -415,12 +413,12 @@ module.exports = Marionette.LayoutView.extend({
   },
   turnOnEditing: function() {
     this.$el.addClass('is-editing')
-    this.filterOperator.currentView.turnOnEditing()
+    this.operator.turnOnEditing()
     this.filterContents.currentView.turnOnEditing()
   },
   turnOffEditing: function() {
     this.$el.removeClass('is-editing')
-    this.filterOperator.currentView.turnOffEditing()
+    this.operator.turnOffEditing()
     this.filterContents.currentView.turnOffEditing()
   },
   turnOffNesting: function() {

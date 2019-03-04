@@ -165,36 +165,6 @@ function setFilter(filter) {
     }
   }
 }
-
-function getFilters(model) {
-  var property = model.get('type')
-  var comparator = model.get('comparator')
-  var value = model.get('value')[0]
-
-  if (comparator === 'NEAR') {
-    return CQLUtils.generateFilterForFilterFunction('proximity', [
-      property,
-      value.distance,
-      value.value,
-    ])
-  }
-
-  var type = comparatorToCQL()[comparator]
-  if (metacardDefinitions.metacardTypes[model.get('type')].multivalued) {
-    return {
-      type: 'AND',
-      filters: model
-        .get('value')
-        .getValue()
-        .map(function(currentValue) {
-          return CQLUtils.generateFilter(type, property, currentValue)
-        }),
-    }
-  } else {
-    return CQLUtils.generateFilter(type, property, value)
-  }
-}
-
 module.exports = Marionette.LayoutView.extend({
   template: template,
   tagName: CustomElements.register('filter'),
@@ -390,9 +360,6 @@ module.exports = Marionette.LayoutView.extend({
     text += ')'
     return text
   },
-  getFilters: function() {
-    return getFilters(this.model)
-  },
   setFilterFromFilterFunction(filter) {
     if (filter.filterFunctionName === 'proximity') {
       var property = filter.params[0]
@@ -447,4 +414,3 @@ module.exports = Marionette.LayoutView.extend({
 })
 
 module.exports.setFilter = setFilter
-module.exports.getFilters = getFilters

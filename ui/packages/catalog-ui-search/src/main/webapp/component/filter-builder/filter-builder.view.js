@@ -28,7 +28,7 @@ var cql = require('../../js/cql.js')
 var DropdownView = require('../dropdown/dropdown.view.js')
 var CQLUtils = require('../../js/CQLUtils.js')
 
-import { serialize } from './filter-serialization'
+import { serialize, deserialize } from './filter-serialization'
 
 const FilterBuilderCollection = Backbone.Collection.extend({
   model(attrs) {
@@ -43,9 +43,6 @@ const FilterBuilderCollection = Backbone.Collection.extend({
 module.exports = Marionette.LayoutView.extend({
   template: template,
   tagName: CustomElements.register('filter-builder'),
-  attributes: function() {
-    return { 'data-id': this.model.cid }
-  },
   events: {
     'click > .filter-header > .contents-buttons .getValue': 'printValue',
     'click > .filter-header > .filter-remove': 'delete',
@@ -59,19 +56,13 @@ module.exports = Marionette.LayoutView.extend({
     filterContents: '.contents-filters',
   },
   initialize: function() {
-    const filters = this.model.get('filters')
-    this.collection = new FilterBuilderCollection(
-      filters || [
-        new FilterModel({
-          sortableOrder: 1,
-          isResultFilter: Boolean(this.model.get('isResultFilter')),
-        }),
-      ],
-      {
-        comparator: 'sortableOrder',
-      }
-    )
-    this.model.set('filters', this.collection)
+    if (this.model === undefined) {
+      debugger
+      this.model = deserialize(this.model, this.options.data)
+    }
+
+    this.collection = this.model.get('filters')
+    this.$el.attr('data-id', this.model.cid)
     this.listenTo(this.model, 'change:operator', this.updateOperatorDropdown)
     if (this.options.isForm === true) {
       if (this.options.isFormBuilder !== true) {
@@ -135,32 +126,14 @@ module.exports = Marionette.LayoutView.extend({
     this.model.destroy()
   },
   addFilter: function(filter) {
-    const numFilters = this.collection.length
-
-    const filterModel = new FilterModel({
-      sortableOrder: numFilters + 1,
+    this.collection.push({
       isResultFilter: Boolean(this.model.get('isResultFilter')),
     })
 
-    if (filter !== undefined) {
-      filterModel.set(FilterView.setFilter(filter))
-    }
-
-    this.collection.push(filterModel)
     this.handleEditing()
   },
-  addFilterBuilder: function({ filters, type } = {}) {
-    const numFilters = this.collection.length
-    const filterBuilderModel = new FilterBuilderModel({
-      sortableOrder: numFilters + 1,
-      filters,
-    })
-
-    if (type !== undefined) {
-      filterBuilderModel.set('operator', type)
-    }
-
-    this.collection.push(filterBuilderModel)
+  addFilterBuilder: function() {
+    this.collection.push({ filterBuilder: true })
     this.handleEditing()
   },
   filterView: FilterView,
@@ -212,14 +185,7 @@ module.exports = Marionette.LayoutView.extend({
     }
   },
   deserialize: function(cql) {
-    if (!cql.filters) {
-      cql = {
-        filters: [cql],
-        type: 'AND',
-      }
-    }
-    this.model.set('operator', cql.type)
-    this.setFilters(cql.filters)
+    deserialize(cql)
   },
   handleEditing: function() {
     var isEditing = this.$el.hasClass('is-editing')

@@ -100,23 +100,24 @@ module.exports = Marionette.LayoutView.extend({
         isFormBuilder: this.options.isFormBuilder || false,
       })
     )
+
+    let data
+    if (this.model.get('filterTree') !== undefined) {
+      data = this.model.get('filterTree')
+    } else if (this.options.isAdd) {
+      data = cql.read("anyText ILIKE '%'")
+    } else if (this.model.get('cql')) {
+      data = cql.simplify(cql.read(this.model.get('cql')))
+    }
+
     this.queryAdvanced.show(
       new FilterBuilderView({
-        model: new FilterBuilderModel(),
+        data,
         isForm: this.options.isForm || false,
         isFormBuilder: this.options.isFormBuilder || false,
       })
     )
 
-    if (this.model.get('filterTree') !== undefined) {
-      this.queryAdvanced.currentView.deserialize(this.model.get('filterTree'))
-    } else if (this.options.isAdd) {
-      this.queryAdvanced.currentView.deserialize(cql.read("anyText ILIKE '%'"))
-    } else if (this.model.get('cql')) {
-      this.queryAdvanced.currentView.deserialize(
-        cql.simplify(cql.read(this.model.get('cql')))
-      )
-    }
     this.queryAdvanced.currentView.turnOffEditing()
     this.edit()
   },

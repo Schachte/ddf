@@ -81,30 +81,6 @@ const determineView = comparator => {
   return necessaryView
 }
 
-function setFilterFromFilterFunction(filter) {
-  if (filter.filterFunctionName === 'proximity') {
-    var property = filter.params[0]
-    var distance = filter.params[1]
-    var value = filter.params[2]
-
-    return {
-      value: [
-        {
-          value: value,
-          distance: distance,
-        },
-      ],
-      // this is confusing but 'type' on the model is actually the name of the property we're filtering on
-      type: property,
-      comparator: 'NEAR',
-    }
-  } else {
-    throw new Error(
-      'Unsupported filter function in filter view: ' + filterFunctionName
-    )
-  }
-}
-
 function comparatorToCQL() {
   return {
     BEFORE: 'BEFORE',
@@ -123,48 +99,6 @@ function comparatorToCQL() {
   }
 }
 
-function CQLtoComparator() {
-  var comparator = {}
-  for (var key in comparatorToCQL()) {
-    comparator[comparatorToCQL()[key]] = key
-  }
-  return comparator
-}
-
-function getComparatorForFilter(filter) {
-  const propertyDefinition = metacardDefinitions.metacardTypes[filter.property]
-  if (
-    propertyDefinition &&
-    propertyDefinition.type === 'DATE' &&
-    filter.type === '='
-  ) {
-    return 'RELATIVE'
-  } else {
-    return CQLtoComparator()[filter.type]
-  }
-}
-
-function setFilter(filter) {
-  if (CQLUtils.isGeoFilter(filter.type)) {
-    filter.value = _.clone(filter)
-  }
-  if (_.isObject(filter.property)) {
-    // if the filter is something like NEAR (which maps to a CQL filter function such as 'proximity'),
-    // there is an enclosing filter that creates the necessary '= TRUE' predicate, and the 'property'
-    // attribute is what actually contains that proximity() call.
-    setFilterFromFilterFunction(filter.property)
-  } else {
-    let value = [filter.value]
-    if (filter.type === 'DURING') {
-      value = [`${filter.from}/${filter.to}`]
-    }
-    return {
-      value,
-      type: filter.property,
-      comparator: getComparatorForFilter(filter),
-    }
-  }
-}
 module.exports = Marionette.LayoutView.extend({
   template: template,
   tagName: CustomElements.register('filter'),
@@ -360,29 +294,6 @@ module.exports = Marionette.LayoutView.extend({
     text += ')'
     return text
   },
-  setFilterFromFilterFunction(filter) {
-    if (filter.filterFunctionName === 'proximity') {
-      var property = filter.params[0]
-      var distance = filter.params[1]
-      var value = filter.params[2]
-
-      this.model.set({
-        value: [
-          {
-            value: value,
-            distance: distance,
-          },
-        ],
-        // this is confusing but 'type' on the model is actually the name of the property we're filtering on
-        type: property,
-        comparator: 'NEAR',
-      })
-    } else {
-      throw new Error(
-        'Unsupported filter function in filter view: ' + filterFunctionName
-      )
-    }
-  },
   onDestroy: function() {
     this._filterDropdownModel.destroy()
   },
@@ -412,5 +323,3 @@ module.exports = Marionette.LayoutView.extend({
     )
   },
 })
-
-module.exports.setFilter = setFilter

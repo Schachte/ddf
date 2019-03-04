@@ -19,8 +19,6 @@ var $ = require('jquery')
 var _ = require('underscore')
 var template = require('./filter-builder.hbs')
 var CustomElements = require('../../js/CustomElements.js')
-var FilterBuilderModel = require('./filter-builder')
-var FilterModel = require('../filter/filter.js')
 var FilterCollectionView = require('../filter/filter.collection.view.js')
 var DropdownModel = require('../dropdown/dropdown.js')
 var FilterView = require('../filter/filter.view.js')
@@ -115,13 +113,15 @@ module.exports = Marionette.LayoutView.extend({
   },
   addFilter: function(filter) {
     this.collection.push({
-      isResultFilter: Boolean(this.model.get('isResultFilter')),
+      isResultFilter: this.model.get('isResultFilter'),
     })
-
     this.handleEditing()
   },
   addFilterBuilder: function() {
-    this.collection.push({ filterBuilder: true })
+    this.collection.push({
+      filterBuilder: true,
+      isResultFilter: this.model.get('isResultFilter'),
+    })
     this.handleEditing()
   },
   filterView: FilterView,

@@ -15,7 +15,6 @@ var _ = require('underscore')
 
 module.exports = Backbone.Model.extend({
   defaults: {
-    value: '',
     operator: 'AND',
     sortableOrder: 0,
   },

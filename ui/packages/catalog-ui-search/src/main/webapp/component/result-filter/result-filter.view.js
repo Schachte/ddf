@@ -45,25 +45,27 @@ module.exports = Marionette.LayoutView.extend({
       .get('resultFilter')
   },
   onRender: function() {
+    var resultFilter = this.getResultFilter()
+    let filter
+    if (resultFilter) {
+      filter = cql.simplify(cql.read(resultFilter))
+    } else {
+      filter = {
+        property: 'anyText',
+        value: '',
+        type: 'ILIKE',
+      }
+    }
     this.editorProperties.show(
       new FilterBuilderView({
-        model: new FilterBuilderModel({ isResultFilter: true }),
+        filter: {
+          ...filter,
+          isResultFilter: true,
+        },
       })
     )
     this.editorProperties.currentView.turnOnEditing()
     this.editorProperties.currentView.turnOffNesting()
-    var resultFilter = this.getResultFilter()
-    if (resultFilter) {
-      this.editorProperties.currentView.deserialize(
-        cql.simplify(cql.read(resultFilter))
-      )
-    } else {
-      this.editorProperties.currentView.deserialize({
-        property: 'anyText',
-        value: '',
-        type: 'ILIKE',
-      })
-    }
     this.handleFilter()
   },
   getFilter: function() {

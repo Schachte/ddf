@@ -30,16 +30,6 @@ var CQLUtils = require('../../js/CQLUtils.js')
 
 import { serialize, deserialize } from './filter-serialization'
 
-const FilterBuilderCollection = Backbone.Collection.extend({
-  model(attrs) {
-    if (attrs.type === 'filter-builder') {
-      return new FilterBuilderModel(attrs)
-    }
-
-    return new FilterModel(FilterView.setFilter(attrs))
-  },
-})
-
 module.exports = Marionette.LayoutView.extend({
   template: template,
   tagName: CustomElements.register('filter-builder'),
@@ -50,15 +40,13 @@ module.exports = Marionette.LayoutView.extend({
     'click > .filter-header > .contents-buttons .add-filterBuilder':
       'addFilterBuilder',
   },
-  modelEvents: {},
   regions: {
     filterOperator: '.filter-operator',
     filterContents: '.contents-filters',
   },
   initialize: function() {
     if (this.model === undefined) {
-      debugger
-      this.model = deserialize(this.model, this.options.data)
+      this.model = deserialize(this.model, this.options.filter)
     }
 
     this.collection = this.model.get('filters')

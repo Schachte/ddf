@@ -101,18 +101,18 @@ module.exports = Marionette.LayoutView.extend({
       })
     )
 
-    let data
+    let filter
     if (this.model.get('filterTree') !== undefined) {
-      data = this.model.get('filterTree')
+      filter = this.model.get('filterTree')
     } else if (this.options.isAdd) {
-      data = cql.read("anyText ILIKE '%'")
+      filter = cql.read("anyText ILIKE '%'")
     } else if (this.model.get('cql')) {
-      data = cql.simplify(cql.read(this.model.get('cql')))
+      filter = cql.simplify(cql.read(this.model.get('cql')))
     }
 
     this.queryAdvanced.show(
       new FilterBuilderView({
-        data,
+        filter,
         isForm: this.options.isForm || false,
         isFormBuilder: this.options.isFormBuilder || false,
       })

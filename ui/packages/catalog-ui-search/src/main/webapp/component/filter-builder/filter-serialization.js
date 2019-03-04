@@ -48,13 +48,12 @@ function FilterViewgetFilters(model) {
           return CQLUtils.generateFilter(type, property, currentValue)
         }),
     }
-  } else {
-    return CQLUtils.generateFilter(
-      type,
-      property,
-      value === undefined ? null : value
-    )
   }
+  return CQLUtils.generateFilter(
+    type,
+    property,
+    value === undefined ? null : value
+  )
 }
 
 function getFiltersAll(model) {
@@ -81,16 +80,16 @@ function getFilters(model) {
         },
       ],
     }
-  } else {
-    return {
-      type: operator,
-      filters: filters.map(getFiltersAll).filter(filter => filter),
-    }
+  }
+  return {
+    type: operator,
+    filters: filters.map(getFiltersAll).filter(filter => filter),
   }
 }
 
 // model->json
 export const serialize = model => {
+  debugger
   return getFiltersAll(model)
 }
 
@@ -140,14 +139,6 @@ export const deserialize = (model, json = defaultJson) => {
     }
   }
   model.set('operator', json.type)
-
-  const stuff = json.filters || [
-    {
-      ...defaultJson,
-      sortableOrder: 1,
-      isResultFilter: Boolean(model.get('isResultFilter')),
-    },
-  ]
 
   const collection = new FilterBuilderCollection()
 

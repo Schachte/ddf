@@ -28,41 +28,7 @@ var cql = require('../../js/cql.js')
 var DropdownView = require('../dropdown/dropdown.view.js')
 var CQLUtils = require('../../js/CQLUtils.js')
 
-function getFiltersAll(model) {
-  if (model !== undefined) {
-    console.log(model.toJSON())
-  }
-
-  if (model instanceof FilterBuilderModel) {
-    return getFilters(model)
-  }
-
-  if (model instanceof FilterModel) {
-    return FilterView.getFilters(model)
-  }
-}
-
-function getFilters(model) {
-  var operator = model.get('operator')
-  const filters = model.get('filters') || []
-
-  if (operator === 'NONE') {
-    return {
-      type: 'NOT',
-      filters: [
-        {
-          type: 'AND',
-          filters: filters.map(getFiltersAll),
-        },
-      ],
-    }
-  } else {
-    return {
-      type: operator,
-      filters: filters.map(getFiltersAll).filter(filter => filter),
-    }
-  }
-}
+import { serialize } from './filter-serialization'
 
 const FilterBuilderCollection = Backbone.Collection.extend({
   model(attrs) {
@@ -211,7 +177,7 @@ module.exports = Marionette.LayoutView.extend({
     }
   },
   getFilters: function() {
-    return getFiltersAll(this.model)
+    return serialize(this.model)
   },
   deleteInvalidFilters: function() {
     const collection = this.collection.filter(function(model) {

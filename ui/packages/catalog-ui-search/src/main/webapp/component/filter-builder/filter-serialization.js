@@ -23,6 +23,71 @@ const FilterModel = Backbone.Model.extend({
   type: 'filter',
 })
 
+const comparatorToCQL = {
+  BEFORE: 'BEFORE',
+  AFTER: 'AFTER',
+  RELATIVE: '=',
+  BETWEEN: 'DURING',
+  INTERSECTS: 'INTERSECTS',
+  CONTAINS: 'ILIKE',
+  MATCHCASE: 'LIKE',
+  EQUALS: '=',
+  '>': '>',
+  '<': '<',
+  '=': '=',
+  '<=': '<=',
+  '>=': '>=',
+}
+
+const transformFilter = filter => {
+  const { type, value, property } = filter
+  if (CQLUtils.isGeoFilter(type)) {
+    filter.value = _.clone(filter)
+  }
+
+  if (_.isObject(property)) {
+    // if the filter is something like NEAR (which maps to a CQL filter function such as 'proximity'),
+    // there is an enclosing filter that creates the necessary '= TRUE' predicate, and the 'property'
+    // attribute is what actually contains that proximity() call.
+    const { filterFunctionName, params } = property
+
+    if (filterFunctionName !== 'proximity') {
+      throw new Error(
+        'Unsupported filter function in filter view: ' + filterFunctionName
+      )
+    }
+
+    const [property, distance, value] = params
+
+    return {
+      // this is confusing but 'type' on the model is actually the name of the property we're filtering on
+      type: property,
+      comparator: 'NEAR',
+      value: [{ value, distance }],
+    }
+  }
+
+  let comparator
+  const definition = metacardDefinitions.metacardTypes[property]
+
+  if (definition && definition.type === 'DATE' && type === '=') {
+    comparator = 'RELATIVE'
+  } else {
+    for (var key in comparatorToCQL) {
+      if (type === comparatorToCQL[key]) {
+        comparator = key
+        break
+      }
+    }
+  }
+
+  return {
+    type: property,
+    comparator,
+    value: [type === 'DURING' ? `${filter.from}/${filter.to}` : value],
+  }
+}
+
 const FilterBuilderCollection = Backbone.Collection.extend({
   comparator: 'sortableOrder',
   model(attrs, { collection }) {
@@ -44,67 +109,6 @@ const FilterBuilderCollection = Backbone.Collection.extend({
     })
   },
 })
-
-const comparatorToCQL = {
-  BEFORE: 'BEFORE',
-  AFTER: 'AFTER',
-  RELATIVE: '=',
-  BETWEEN: 'DURING',
-  INTERSECTS: 'INTERSECTS',
-  CONTAINS: 'ILIKE',
-  MATCHCASE: 'LIKE',
-  EQUALS: '=',
-  '>': '>',
-  '<': '<',
-  '=': '=',
-  '<=': '<=',
-  '>=': '>=',
-}
-
-function CQLtoComparator() {
-  var comparator = {}
-  for (var key in comparatorToCQL) {
-    comparator[comparatorToCQL[key]] = key
-  }
-  return comparator
-}
-
-function getComparatorForFilter(filter) {
-  const propertyDefinition = metacardDefinitions.metacardTypes[filter.property]
-  if (
-    propertyDefinition &&
-    propertyDefinition.type === 'DATE' &&
-    filter.type === '='
-  ) {
-    return 'RELATIVE'
-  } else {
-    return CQLtoComparator()[filter.type]
-  }
-}
-
-function setFilterFromFilterFunction(filter) {
-  if (filter.filterFunctionName === 'proximity') {
-    var property = filter.params[0]
-    var distance = filter.params[1]
-    var value = filter.params[2]
-
-    return {
-      value: [
-        {
-          value: value,
-          distance: distance,
-        },
-      ],
-      // this is confusing but 'type' on the model is actually the name of the property we're filtering on
-      type: property,
-      comparator: 'NEAR',
-    }
-  } else {
-    throw new Error(
-      'Unsupported filter function in filter view: ' + filterFunctionName
-    )
-  }
-}
 
 // model->json
 export const serialize = model => {
@@ -168,56 +172,39 @@ const defaultJson = {
   comparator: 'CONTAINS',
 }
 
-function transformFilter(filter) {
-  if (CQLUtils.isGeoFilter(filter.type)) {
-    filter.value = _.clone(filter)
-  }
-  if (_.isObject(filter.property)) {
-    // if the filter is something like NEAR (which maps to a CQL filter function such as 'proximity'),
-    // there is an enclosing filter that creates the necessary '= TRUE' predicate, and the 'property'
-    // attribute is what actually contains that proximity() call.
-    setFilterFromFilterFunction(filter.property)
-  } else {
-    let value = [filter.value]
-    if (filter.type === 'DURING') {
-      value = [`${filter.from}/${filter.to}`]
-    }
-    return {
-      value,
-      type: filter.property,
-      comparator: getComparatorForFilter(filter),
-    }
-  }
-}
-
 // json->model
-export const deserialize = (model, json = defaultJson) => {
+export const deserialize = (filter = defaultJson, model) => {
   if (model === undefined) {
     model = new FilterBuilderModel()
   }
 
-  if (!json.filters) {
-    json = {
-      filters: [json],
+  const { type, filters } = filter
+
+  model.set('operator', type)
+
+  if (!filters) {
+    filter = {
+      filters: [filter],
       type: 'AND',
     }
   }
-  model.set('operator', json.type)
 
   const collection = new FilterBuilderCollection()
 
   model.set('filters', collection)
 
-  json.filters.forEach(function(filter) {
-    if (filter.filters) {
-      collection.push(deserialize(undefined, filter))
-    } else {
-      collection.push({
-        isResultFilter: Boolean(model.get('isResultFilter')),
-        ...filter,
-      })
-    }
-  })
+  collection.reset(
+    filters.map(function(filter) {
+      if (filter.filters) {
+        return deserialize(filter)
+      } else {
+        return {
+          isResultFilter: model.get('isResultFilter'),
+          ...filter,
+        }
+      }
+    })
+  )
 
   return model
 }

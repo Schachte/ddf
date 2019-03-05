@@ -44,7 +44,7 @@ module.exports = Marionette.LayoutView.extend({
   },
   initialize: function() {
     if (this.model === undefined) {
-      this.model = deserialize(this.model, this.options.filter)
+      this.model = deserialize(this.options.filter, this.model)
     }
 
     this.collection = this.model.get('filters')
